@@ -1,14 +1,11 @@
 // frontend/api/create-order.js
 export default async function handler(req, res) {
-  // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const { amount, currency, receipt } = req.body;
-
-    console.log("Amount received:", amount);
 
     // Return a mock order (ALWAYS works)
     res.status(200).json({
@@ -18,9 +15,6 @@ export default async function handler(req, res) {
       receipt: receipt,
     });
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ 
-      error: 'Server error: ' + error.message 
-    });
+    res.status(500).json({ error: 'Server error: ' + error.message });
   }
 }
