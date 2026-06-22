@@ -12,7 +12,7 @@ function Payment() {
       id: 1, 
       name: "Monthly", 
       price: 199,
-      amount: 19900, // ₹199 in paise
+      amount: 19900,
       features: ["All Content", "Chat Access", "Stickers", "Likes"] 
     },
     { 
@@ -83,7 +83,6 @@ function Payment() {
         description: `${plan.name} Subscription`,
         order_id: order.id,
         handler: function(response) {
-          // Payment successful
           setPaymentId(response.razorpay_payment_id);
           setShowSuccess(true);
           setLoading(false);

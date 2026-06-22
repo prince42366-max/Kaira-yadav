@@ -2,7 +2,6 @@
 const Razorpay = require('razorpay');
 
 export default async function handler(req, res) {
-  // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -12,7 +11,6 @@ export default async function handler(req, res) {
 
     console.log("Creating order for amount:", amount);
 
-    // Use HARDCODED keys (this will work for sure)
     const razorpay = new Razorpay({
       key_id: "rzp_test_T4cAGoIupg8XmO",
       key_secret: "5Ycgi7piH3zImcFp1uGqlT3u",
