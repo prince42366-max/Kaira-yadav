@@ -1,5 +1,7 @@
 // frontend/api/create-order.js
-export default function handler(req, res) {
+import Razorpay from 'razorpay';
+
+export default async function handler(req, res) {
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -8,18 +10,28 @@ export default function handler(req, res) {
   try {
     const { amount, currency, receipt } = req.body;
 
-    console.log("Amount:", amount);
+    console.log("Amount received:", amount);
 
-    // ALWAYS return a valid order
-    return res.status(200).json({
-      id: 'order_' + Math.random().toString(36).substring(2, 15),
+    // Use hardcoded keys (since environment variables are not working)
+    const razorpay = new Razorpay({
+      key_id: "rzp_test_T4cAGoIupg8XmO",
+      key_secret: "5Ycgi7piH3zImcFp1uGqlT3u",
+    });
+
+    const order = await razorpay.orders.create({
       amount: amount,
       currency: currency,
       receipt: receipt,
+      payment_capture: 1,
     });
+
+    console.log("Order created:", order.id);
+    res.status(200).json(order);
+
   } catch (error) {
-    return res.status(500).json({ 
-      error: 'Error: ' + error.message 
+    console.error('Order creation error:', error);
+    res.status(500).json({ 
+      error: 'Failed to create order: ' + error.message 
     });
   }
 }
