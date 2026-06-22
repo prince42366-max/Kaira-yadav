@@ -76,7 +76,7 @@ function Payment() {
 
       // 3. Open Razorpay Checkout
       const options = {
-        key: "rzp_test_T4cAGoIupg8XmO", // ✅ CORRECT KEY
+        key: "rzp_live_T4fhMs1b6pXETJ", // ✅ CORRECT KEY
         amount: plan.amount,
         currency: "INR",
         name: "Kaira Yadav Fan Platform",

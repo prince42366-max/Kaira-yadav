@@ -14,8 +14,8 @@ export default async function handler(req, res) {
 
     // Use hardcoded keys (since environment variables are not working)
     const razorpay = new Razorpay({
-      key_id: "rzp_test_T4cAGoIupg8XmO",
-      key_secret: "5Ycgi7piH3zImcFp1uGqlT3u",
+      key_id: "rzp_live_T4fhMs1b6pXETJ",
+      key_secret: "kpLiXJWtPMowmAPkFyLSYbvK",
     });
 
     const order = await razorpay.orders.create({
