@@ -12,7 +12,7 @@ function Payment() {
       id: 1, 
       name: "Monthly", 
       price: 199,
-      amount: 19900,
+      amount: 19900, // ₹199 in paise
       features: ["All Content", "Chat Access", "Stickers", "Likes"] 
     },
     { 
@@ -48,6 +48,7 @@ function Payment() {
     setLoading(true);
 
     try {
+      // 1. Load Razorpay script
       const isScriptLoaded = await loadRazorpayScript();
       if (!isScriptLoaded) {
         alert("❌ Payment gateway failed to load. Please try again.");
@@ -55,6 +56,7 @@ function Payment() {
         return;
       }
 
+      // 2. Create order via Vercel API
       const response = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -72,18 +74,21 @@ function Payment() {
         return;
       }
 
+      // 3. Open Razorpay Checkout
       const options = {
-        key: "rzp_test_T4cAGoIupg8XmO", // ✅ Your Key ID
+        key: "rzp_test_T4cAGoIupg8XmO", // ✅ CORRECT KEY
         amount: plan.amount,
         currency: "INR",
         name: "Kaira Yadav Fan Platform",
         description: `${plan.name} Subscription`,
         order_id: order.id,
         handler: function(response) {
+          // Payment successful
           setPaymentId(response.razorpay_payment_id);
           setShowSuccess(true);
           setLoading(false);
           
+          // Save subscription
           const expiryDate = new Date();
           if (plan.name === "Monthly") {
             expiryDate.setMonth(expiryDate.getMonth() + 1);
@@ -221,6 +226,7 @@ function Payment() {
           </p>
         </div>
 
+        {/* ===== PLANS ===== */}
         <div style={{ display: "flex", gap: "10px", marginBottom: "25px", flexWrap: "wrap" }}>
           {plans.map((plan) => (
             <button
@@ -250,6 +256,7 @@ function Payment() {
           ))}
         </div>
 
+        {/* ===== PAY NOW BUTTON ===== */}
         <button
           onClick={() => {
             if (!selectedPlan) {
