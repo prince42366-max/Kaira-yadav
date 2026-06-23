@@ -24,7 +24,7 @@ function Dashboard() {
 
   const [showBuyCoupons, setShowBuyCoupons] = useState(false);
 
-  // ===== HARDCODED CONTENT (Photos & Videos from public folder) =====
+  // ===== HARDCODED CONTENT =====
   const hardcodedContent = [
     {
       id: 1,
@@ -88,7 +88,6 @@ function Dashboard() {
     },
   ];
 
-  // ===== LOAD CONTENT: Combine hardcoded + localStorage (admin uploads) =====
   const [content, setContent] = useState(() => {
     const saved = localStorage.getItem('uploadedContent');
     const adminContent = saved ? JSON.parse(saved) : [];
@@ -206,7 +205,7 @@ function Dashboard() {
     });
   };
 
-  // ===== BUY COUPONS WITH REAL PAYMENT =====
+  // ===== BUY COUPONS =====
   const buyCoupons = async (amount, price, couponCount) => {
     const isScriptLoaded = await loadRazorpayScript();
     if (!isScriptLoaded) {
@@ -232,7 +231,7 @@ function Dashboard() {
       }
 
       const options = {
-        key: "rzp_live_YOUR_LIVE_KEY_ID", // Replace with your Live Key ID
+        key: "rzp_live_YOUR_LIVE_KEY_ID",
         amount: amount * 100,
         currency: "INR",
         name: "Kaira Yadav Fan Platform",
@@ -288,7 +287,7 @@ function Dashboard() {
     localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
   };
 
-  // ===== SEND MESSAGE (FIXED: saves to localStorage, no auto-reply) =====
+  // ===== SEND MESSAGE (FIXED: saves to localStorage) =====
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!message.trim()) return;
@@ -304,7 +303,6 @@ function Dashboard() {
 
     const userPhone = localStorage.getItem('userPhone') || 'unknown';
     
-    // Create message object
     const newMsg = { 
       from: "You", 
       text: message,
@@ -314,27 +312,21 @@ function Dashboard() {
       timestamp: Date.now()
     };
     
-    // Get existing messages from localStorage
     const saved = localStorage.getItem('chatMessages');
     let allMessages = saved ? JSON.parse(saved) : {};
     
-    // Add message to this user's chat
     if (!allMessages[userPhone]) {
       allMessages[userPhone] = [];
     }
     allMessages[userPhone].push(newMsg);
     
-    // Save back to localStorage
     localStorage.setItem('chatMessages', JSON.stringify(allMessages));
     
-    // Update local state
     setMessages([...messages, newMsg]);
     setMessage("");
-
-    // ===== AUTO-REPLY REMOVED! =====
   };
 
-  // ===== SEND STICKER TO CONTENT =====
+  // ===== SEND STICKER =====
   const sendStickerToContent = (contentId, sticker) => {
     if (coupons < 2) {
       alert(`❌ You need 2 coupons to send a sticker! You have ${coupons} coupons.`);
@@ -398,15 +390,39 @@ function Dashboard() {
   const hasPhotos = content && content.filter(item => item.fileType === 'image').length > 0;
 
   return (
-    <div style={{
-      background: "linear-gradient(180deg, #0a0a0f 0%, #1a1a2e 100%)",
-      color: "white",
-      minHeight: "100vh",
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      padding: "20px",
-      maxWidth: "500px",
-      margin: "0 auto",
-    }}>
+    <div
+      onContextMenu={(e) => {
+        // Block right-click
+        e.preventDefault();
+        alert("📸 Screenshots and screen recording are disabled on this page.");
+      }}
+      onKeyDown={(e) => {
+        // Block PrintScreen, Ctrl+S, Ctrl+Shift+S, Ctrl+P
+        if (
+          e.key === "PrintScreen" ||
+          (e.ctrlKey && e.key === "s") ||
+          (e.ctrlKey && e.shiftKey && e.key === "s") ||
+          (e.ctrlKey && e.key === "p")
+        ) {
+          e.preventDefault();
+          alert("📸 Screenshots and screen recording are disabled on this page.");
+          return false;
+        }
+      }}
+      style={{
+        background: "linear-gradient(180deg, #0a0a0f 0%, #1a1a2e 100%)",
+        color: "white",
+        minHeight: "100vh",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        padding: "20px",
+        maxWidth: "500px",
+        margin: "0 auto",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        MozUserSelect: "none",
+        msUserSelect: "none",
+      }}
+    >
       {/* ===== HEADER ===== */}
       <div style={{
         display: "flex",
@@ -866,7 +882,6 @@ function Dashboard() {
             </div>
           ) : (
             <>
-              {/* ===== PHOTOS ===== */}
               {hasPhotos && (
                 <div style={{ marginBottom: "25px" }}>
                   <div style={{
@@ -1069,7 +1084,6 @@ function Dashboard() {
                 </div>
               )}
 
-              {/* ===== VIDEOS ===== */}
               {hasVideos && (
                 <div style={{ marginTop: "25px" }}>
                   <div style={{
@@ -1285,7 +1299,7 @@ function Dashboard() {
       )}
 
       {/* ========================================================== */}
-      {/* CHAT SECTION (FIXED: no auto-reply, messages saved to localStorage) */}
+      {/* CHAT SECTION (FIXED: no auto-reply) */}
       {/* ========================================================== */}
       {showChat && (
         <div style={{
@@ -1474,9 +1488,7 @@ function Dashboard() {
         </div>
       )}
 
-      {/* ========================================================== */}
-      {/* FULL SCREEN POPUP */}
-      {/* ========================================================== */}
+      {/* ===== FULL SCREEN POPUP ===== */}
       {popupContent && (
         <div
           onClick={closePopup}
@@ -1632,6 +1644,20 @@ function Dashboard() {
           }
           div:hover .expand-icon {
             opacity: 1 !important;
+          }
+
+          /* Disable text selection */
+          * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+          }
+          img, video {
+            -webkit-touch-callout: none;
+            pointer-events: auto;
           }
         `}
       </style>

@@ -48,10 +48,12 @@ function Admin() {
       try {
         const all = JSON.parse(saved);
         setMessages(all);
+        return all;
       } catch (e) {
         console.error("Error loading chat:", e);
       }
     }
+    return {};
   };
 
   // ============================================================
@@ -127,7 +129,6 @@ function Admin() {
       setContent(updatedContent);
       localStorage.setItem('uploadedContent', JSON.stringify(updatedContent));
       
-      // ===== SEND NOTIFICATION =====
       const newNotif = {
         id: Date.now(),
         title: "📸 New Content Added!",
@@ -190,7 +191,7 @@ function Admin() {
   };
 
   // ============================================================
-  // HANDLE SEND MESSAGE (Admin to Fan) – also saves to localStorage
+  // HANDLE SEND MESSAGE (Admin to Fan)
   // ============================================================
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -207,7 +208,6 @@ function Admin() {
       timestamp: Date.now()
     };
 
-    // Get existing messages
     const saved = localStorage.getItem('chatMessages');
     let allMessages = saved ? JSON.parse(saved) : {};
     
@@ -218,7 +218,6 @@ function Admin() {
     
     localStorage.setItem('chatMessages', JSON.stringify(allMessages));
     
-    // Update state
     const currentMessages = messages[phone] || [];
     setMessages({ ...messages, [phone]: [...currentMessages, msg] });
     setNewMessage("");
@@ -229,13 +228,9 @@ function Admin() {
   // ============================================================
   const selectUser = (user) => {
     setSelectedUser(user);
-    // Load messages for that user from localStorage
-    const saved = localStorage.getItem('chatMessages');
-    if (saved) {
-      const all = JSON.parse(saved);
-      const userMessages = all[user.phone] || [];
-      setMessages({ ...messages, [user.phone]: userMessages });
-    }
+    const all = loadChatMessages();
+    const userMessages = all[user.phone] || [];
+    setMessages({ ...messages, [user.phone]: userMessages });
   };
 
   // ============================================================
@@ -357,7 +352,6 @@ function Admin() {
       maxWidth: "1000px",
       margin: "0 auto",
     }}>
-      {/* ===== HEADER ===== */}
       <div style={{
         display: "flex",
         justifyContent: "space-between",
@@ -391,7 +385,6 @@ function Admin() {
         </button>
       </div>
 
-      {/* ===== STATS ===== */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
@@ -479,7 +472,6 @@ function Admin() {
         </div>
       </div>
 
-      {/* ===== TABS ===== */}
       <div style={{
         display: "flex",
         gap: "5px",
@@ -515,9 +507,6 @@ function Admin() {
         ))}
       </div>
 
-      {/* ========================================================== */}
-      {/* DASHBOARD TAB */}
-      {/* ========================================================== */}
       {activeTab === "dashboard" && (
         <div style={{ marginTop: "20px" }}>
           <div style={{
@@ -589,9 +578,6 @@ function Admin() {
         </div>
       )}
 
-      {/* ========================================================== */}
-      {/* USERS TAB */}
-      {/* ========================================================== */}
       {activeTab === "users" && (
         <div style={{ marginTop: "20px" }}>
           <div style={{
@@ -634,9 +620,6 @@ function Admin() {
         </div>
       )}
 
-      {/* ========================================================== */}
-      {/* CONTENT TAB */}
-      {/* ========================================================== */}
       {activeTab === "content" && (
         <div style={{ marginTop: "20px" }}>
           <div style={{
@@ -882,9 +865,6 @@ function Admin() {
         </div>
       )}
 
-      {/* ========================================================== */}
-      {/* COUPONS TAB */}
-      {/* ========================================================== */}
       {activeTab === "coupons" && (
         <div style={{ marginTop: "20px" }}>
           <div style={{
@@ -926,7 +906,6 @@ function Admin() {
       {/* ========================================================== */}
       {activeTab === "chat" && (
         <div style={{ marginTop: "20px", display: "flex", gap: "20px", flexWrap: "wrap" }}>
-          {/* User List */}
           <div style={{
             flex: "1",
             minWidth: "200px",
@@ -997,7 +976,6 @@ function Admin() {
             })}
           </div>
 
-          {/* Chat Window */}
           <div style={{
             flex: "2",
             minWidth: "250px",
