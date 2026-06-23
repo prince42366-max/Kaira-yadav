@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function Admin() {
   // ===== LOGIN =====
@@ -41,7 +41,9 @@ function Admin() {
   const [messages, setMessages] = useState({});
   const [newMessage, setNewMessage] = useState("");
 
-  // Load chat messages from localStorage
+  // ============================================================
+  // LOAD CHAT MESSAGES
+  // ============================================================
   const loadChatMessages = () => {
     const saved = localStorage.getItem('chatMessages');
     if (saved) {
@@ -56,16 +58,30 @@ function Admin() {
     return {};
   };
 
+  useEffect(() => {
+    if (activeTab === "chat") {
+      loadChatMessages();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedUser) {
+      const all = loadChatMessages();
+      const userMessages = all[selectedUser.phone] || [];
+      setMessages(prev => ({ ...prev, [selectedUser.phone]: userMessages }));
+    }
+  }, [selectedUser]);
+
   // ============================================================
-  // LOGIN
+  // ADMIN LOGIN
   // ============================================================
   const handleLogin = (e) => {
     e.preventDefault();
-    if (password === "admin123") {
+    if (password === "9090823982") {  // ✅ New password
       setIsLoggedIn(true);
       setError("");
     } else {
-      setError("❌ Invalid password! Try: admin123");
+      setError("❌ Invalid password.");  // ✅ No hint
     }
   };
 
@@ -75,7 +91,7 @@ function Admin() {
   };
 
   // ============================================================
-  // ADD CONTENT + SEND NOTIFICATION
+  // ADD CONTENT
   // ============================================================
   const handleAddContent = (e) => {
     e.preventDefault();
@@ -166,7 +182,7 @@ function Admin() {
   };
 
   // ============================================================
-  // SEND MANUAL NOTIFICATION
+  // SEND NOTIFICATION
   // ============================================================
   const sendNotification = () => {
     const title = prompt("Notification Title:", "New Content Alert!");
@@ -191,7 +207,7 @@ function Admin() {
   };
 
   // ============================================================
-  // HANDLE SEND MESSAGE (Admin to Fan)
+  // HANDLE SEND MESSAGE
   // ============================================================
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -230,7 +246,7 @@ function Admin() {
     setSelectedUser(user);
     const all = loadChatMessages();
     const userMessages = all[user.phone] || [];
-    setMessages({ ...messages, [user.phone]: userMessages });
+    setMessages(prev => ({ ...prev, [user.phone]: userMessages }));
   };
 
   // ============================================================
@@ -244,24 +260,28 @@ function Admin() {
   // ============================================================
   if (!isLoggedIn) {
     return (
-      <div style={{
-        background: "#0a0a0f",
-        color: "white",
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        fontFamily: "'Segoe UI', Arial, sans-serif",
-        padding: "20px",
-      }}>
-        <div style={{
-          background: "#1a1a2e",
-          padding: "40px",
-          borderRadius: "20px",
-          maxWidth: "400px",
-          width: "100%",
-          border: "1px solid #2a2a4a",
-        }}>
+      <div
+        style={{
+          background: "#0a0a0f",
+          color: "white",
+          minHeight: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          fontFamily: "'Segoe UI', Arial, sans-serif",
+          padding: "20px",
+        }}
+      >
+        <div
+          style={{
+            background: "#1a1a2e",
+            padding: "40px",
+            borderRadius: "20px",
+            maxWidth: "400px",
+            width: "100%",
+            border: "1px solid #2a2a4a",
+          }}
+        >
           <div style={{ textAlign: "center", marginBottom: "30px" }}>
             <div style={{ fontSize: "50px" }}>🛡️</div>
             <h1 style={{ color: "#fbbf24", fontSize: "28px", margin: "10px 0 5px 0" }}>
@@ -273,16 +293,18 @@ function Admin() {
           </div>
 
           {error && (
-            <div style={{
-              background: "rgba(239,68,68,0.2)",
-              border: "1px solid #ef4444",
-              color: "#ef4444",
-              padding: "10px",
-              borderRadius: "8px",
-              marginBottom: "20px",
-              textAlign: "center",
-              fontSize: "14px",
-            }}>
+            <div
+              style={{
+                background: "rgba(239,68,68,0.2)",
+                border: "1px solid #ef4444",
+                color: "#ef4444",
+                padding: "10px",
+                borderRadius: "8px",
+                marginBottom: "20px",
+                textAlign: "center",
+                fontSize: "14px",
+              }}
+            >
               {error}
             </div>
           )}
@@ -306,9 +328,6 @@ function Admin() {
                 boxSizing: "border-box",
               }}
             />
-            <div style={{ color: "#64748b", fontSize: "12px", marginTop: "5px" }}>
-              Default password: admin123
-            </div>
 
             <button
               type="submit"
@@ -343,15 +362,35 @@ function Admin() {
   // ADMIN DASHBOARD
   // ============================================================
   return (
-    <div style={{
-      background: "#0a0a0f",
-      color: "white",
-      minHeight: "100vh",
-      fontFamily: "'Segoe UI', Arial, sans-serif",
-      padding: "20px",
-      maxWidth: "1000px",
-      margin: "0 auto",
-    }}>
+    <div
+      onContextMenu={(e) => {
+        e.preventDefault();
+        alert("📸 Screenshots and screen recording are disabled.");
+      }}
+      onKeyDown={(e) => {
+        if (
+          e.key === "PrintScreen" ||
+          (e.ctrlKey && e.key === "s") ||
+          (e.ctrlKey && e.shiftKey && e.key === "s") ||
+          (e.ctrlKey && e.key === "p")
+        ) {
+          e.preventDefault();
+          alert("📸 Screenshots and screen recording are disabled.");
+          return false;
+        }
+      }}
+      style={{
+        background: "#0a0a0f",
+        color: "white",
+        minHeight: "100vh",
+        fontFamily: "'Segoe UI', Arial, sans-serif",
+        padding: "20px",
+        maxWidth: "1000px",
+        margin: "0 auto",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+      }}
+    >
       <div style={{
         display: "flex",
         justifyContent: "space-between",
@@ -484,7 +523,10 @@ function Admin() {
         {["dashboard", "users", "content", "coupons", "chat"].map(tab => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => {
+              setActiveTab(tab);
+              if (tab === "chat") loadChatMessages();
+            }}
             style={{
               flex: 1,
               padding: "10px",
@@ -779,7 +821,6 @@ function Admin() {
                     fontSize: "16px",
                     fontWeight: "700",
                     cursor: uploading ? "not-allowed" : "pointer",
-                    transition: "all 0.3s",
                   }}
                 >
                   {uploading ? "⏳ Adding..." : "✅ Add Content"}
@@ -845,7 +886,6 @@ function Admin() {
                       cursor: "pointer",
                       fontSize: "13px",
                       fontWeight: "600",
-                      transition: "all 0.3s",
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.background = "#ef4444";
@@ -902,7 +942,7 @@ function Admin() {
       )}
 
       {/* ========================================================== */}
-      {/* CHAT TAB - FIXED: Messages from Dashboard appear here */}
+      {/* CHAT TAB – WITH REFRESH BUTTON */}
       {/* ========================================================== */}
       {activeTab === "chat" && (
         <div style={{ marginTop: "20px", display: "flex", gap: "20px", flexWrap: "wrap" }}>
@@ -916,7 +956,27 @@ function Admin() {
             maxHeight: "400px",
             overflowY: "auto",
           }}>
-            <h4 style={{ color: "#fbbf24", margin: "0 0 15px 0" }}>👥 Fans</h4>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+              <h4 style={{ color: "#fbbf24", margin: 0 }}>👥 Fans</h4>
+              <button
+                onClick={() => {
+                  const all = loadChatMessages();
+                  alert(`✅ Chat refreshed! ${Object.keys(all).length} users have messages.`);
+                }}
+                style={{
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  border: "none",
+                  background: "#8b5cf6",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                }}
+              >
+                🔄 Refresh
+              </button>
+            </div>
             {users.map(user => {
               const phone = user.phone;
               const saved = localStorage.getItem('chatMessages');
@@ -955,20 +1015,16 @@ function Admin() {
                       {user.plan === "Premium" ? "⭐ Premium" : "📖 Free"}
                     </div>
                   </div>
-                  {hasUnread && (
+                  {userMessages.length > 0 && (
                     <div style={{
-                      background: "#ef4444",
+                      background: "#22c55e",
                       color: "white",
-                      borderRadius: "50%",
-                      width: "20px",
-                      height: "20px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "11px",
+                      borderRadius: "12px",
+                      padding: "2px 8px",
+                      fontSize: "10px",
                       fontWeight: "bold",
                     }}>
-                      {userMessages.filter(m => m.sender === 'fan' && !m.read).length}
+                      {userMessages.length}
                     </div>
                   )}
                 </div>

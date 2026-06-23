@@ -4,7 +4,7 @@ function Dashboard() {
   const [showChat, setShowChat] = useState(false);
   const [message, setMessage] = useState("");
 
-  // ===== CHAT MESSAGES FROM LOCALSTORAGE =====
+  // ===== CHAT MESSAGES =====
   const [messages, setMessages] = useState(() => {
     const userPhone = localStorage.getItem('userPhone') || 'unknown';
     const saved = localStorage.getItem('chatMessages');
@@ -17,12 +17,16 @@ function Dashboard() {
 
   const [popupContent, setPopupContent] = useState(null);
 
+  // ===== COUPONS =====
   const [coupons, setCoupons] = useState(() => {
     const saved = localStorage.getItem('userCoupons');
     return saved ? JSON.parse(saved) : 10;
   });
 
   const [showBuyCoupons, setShowBuyCoupons] = useState(false);
+
+  // ===== CHECK IF SPECIAL USER (unlimited coupons, premium) =====
+  const isSpecialUser = localStorage.getItem('isSpecialUser') === 'true';
 
   // ===== HARDCODED CONTENT =====
   const hardcodedContent = [
@@ -262,8 +266,26 @@ function Dashboard() {
     }
   };
 
-  // ===== HANDLE LIKE =====
+  // ===== HANDLE LIKE (with special user check) =====
   const handleLike = (contentId) => {
+    // Special user: free likes
+    if (isSpecialUser) {
+      const updatedContent = content.map(c => 
+        c.id === contentId 
+          ? { 
+              ...c, 
+              liked: !c.liked,
+              likes: c.liked ? c.likes - 1 : c.likes + 1
+            }
+          : c
+      );
+      setContent(updatedContent);
+      const adminItems = updatedContent.filter(item => item.id > 5);
+      localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
+      return;
+    }
+
+    // Regular user: deduct 2 coupons
     if (coupons < 2) {
       alert(`❌ You need 2 coupons to like! You have ${coupons} coupons.`);
       return;
@@ -287,11 +309,37 @@ function Dashboard() {
     localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
   };
 
-  // ===== SEND MESSAGE (FIXED: saves to localStorage) =====
+  // ===== SEND MESSAGE (with special user check) =====
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!message.trim()) return;
 
+    // Special user: unlimited messages, no coupon deduction
+    if (isSpecialUser) {
+      const userPhone = localStorage.getItem('userPhone') || 'unknown';
+      const newMsg = { 
+        from: "You", 
+        text: message,
+        sender: 'fan',
+        time: new Date().toLocaleTimeString(),
+        phone: userPhone,
+        timestamp: Date.now()
+      };
+      
+      const saved = localStorage.getItem('chatMessages');
+      let allMessages = saved ? JSON.parse(saved) : {};
+      if (!allMessages[userPhone]) {
+        allMessages[userPhone] = [];
+      }
+      allMessages[userPhone].push(newMsg);
+      localStorage.setItem('chatMessages', JSON.stringify(allMessages));
+      
+      setMessages([...messages, newMsg]);
+      setMessage("");
+      return;
+    }
+
+    // Regular user: deduct 5 coupons
     if (coupons < 5) {
       alert(`❌ You need 5 coupons to send a message! You have ${coupons} coupons.`);
       return;
@@ -302,7 +350,6 @@ function Dashboard() {
     localStorage.setItem('userCoupons', JSON.stringify(newCoupons));
 
     const userPhone = localStorage.getItem('userPhone') || 'unknown';
-    
     const newMsg = { 
       from: "You", 
       text: message,
@@ -314,20 +361,36 @@ function Dashboard() {
     
     const saved = localStorage.getItem('chatMessages');
     let allMessages = saved ? JSON.parse(saved) : {};
-    
     if (!allMessages[userPhone]) {
       allMessages[userPhone] = [];
     }
     allMessages[userPhone].push(newMsg);
-    
     localStorage.setItem('chatMessages', JSON.stringify(allMessages));
     
     setMessages([...messages, newMsg]);
     setMessage("");
   };
 
-  // ===== SEND STICKER =====
+  // ===== SEND STICKER (with special user check) =====
   const sendStickerToContent = (contentId, sticker) => {
+    // Special user: free stickers
+    if (isSpecialUser) {
+      const updatedContent = content.map(c => 
+        c.id === contentId 
+          ? { 
+              ...c, 
+              stickers: [...(c.stickers || []), { sticker: sticker, from: "Fan", time: new Date().toLocaleTimeString() }]
+            }
+          : c
+      );
+      setContent(updatedContent);
+      const adminItems = updatedContent.filter(item => item.id > 5);
+      localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
+      alert(`🎨 Sticker sent! (Free for you)`);
+      return;
+    }
+
+    // Regular user: deduct 2 coupons
     if (coupons < 2) {
       alert(`❌ You need 2 coupons to send a sticker! You have ${coupons} coupons.`);
       return;
@@ -389,23 +452,26 @@ function Dashboard() {
   const hasVideos = content && content.filter(item => item.fileType === 'video').length > 0;
   const hasPhotos = content && content.filter(item => item.fileType === 'image').length > 0;
 
+  // ============================================================
+  // RENDER – with strong screen protection
+  // ============================================================
   return (
     <div
       onContextMenu={(e) => {
-        // Block right-click
         e.preventDefault();
-        alert("📸 Screenshots and screen recording are disabled on this page.");
+        alert("📸 Screenshots and screen recording are disabled.");
+        return false;
       }}
       onKeyDown={(e) => {
         // Block PrintScreen, Ctrl+S, Ctrl+Shift+S, Ctrl+P
         if (
           e.key === "PrintScreen" ||
-          (e.ctrlKey && e.key === "s") ||
-          (e.ctrlKey && e.shiftKey && e.key === "s") ||
-          (e.ctrlKey && e.key === "p")
+          (e.ctrlKey && (e.key === "s" || e.key === "S")) ||
+          (e.ctrlKey && e.shiftKey && (e.key === "s" || e.key === "S")) ||
+          (e.ctrlKey && (e.key === "p" || e.key === "P"))
         ) {
           e.preventDefault();
-          alert("📸 Screenshots and screen recording are disabled on this page.");
+          alert("📸 Screenshots and screen recording are disabled.");
           return false;
         }
       }}
@@ -421,8 +487,36 @@ function Dashboard() {
         WebkitUserSelect: "none",
         MozUserSelect: "none",
         msUserSelect: "none",
+        position: "relative",
       }}
     >
+      {/* ===== OVERLAY WATERMARK (additional protection) ===== */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: "none",
+          zIndex: 9999,
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          alignItems: "center",
+          opacity: 0.05,
+          fontSize: "20px",
+          fontWeight: "bold",
+          color: "#8b5cf6",
+          letterSpacing: "10px",
+          transform: "rotate(-15deg)",
+        }}
+      >
+        {Array.from({ length: 30 }).map((_, i) => (
+          <span key={i} style={{ margin: "20px" }}>🔒 PRIVATE</span>
+        ))}
+      </div>
+
       {/* ===== HEADER ===== */}
       <div style={{
         display: "flex",
@@ -430,6 +524,8 @@ function Dashboard() {
         alignItems: "center",
         padding: "15px 0",
         borderBottom: "2px solid rgba(139, 92, 246, 0.3)",
+        position: "relative",
+        zIndex: 1,
       }}>
         <h2 style={{
           margin: 0,
@@ -485,6 +581,8 @@ function Dashboard() {
               fontSize: "13px",
               fontWeight: "600",
               transition: "all 0.3s",
+              position: "relative",
+              zIndex: 1,
             }}
             onMouseEnter={(e) => {
               e.target.style.background = "#ef4444";
@@ -510,6 +608,8 @@ function Dashboard() {
         marginTop: "20px",
         border: "1px solid rgba(139, 92, 246, 0.3)",
         boxShadow: "0 10px 40px rgba(139, 92, 246, 0.2)",
+        position: "relative",
+        zIndex: 1,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
           <div style={{
@@ -541,42 +641,61 @@ function Dashboard() {
               <span style={{ color: "#fbbf24", fontWeight: "bold" }}>
                 🎫 {coupons} coupons
               </span>
+              {isSpecialUser && (
+                <span style={{ color: "#fbbf24", fontWeight: "bold", background: "#fbbf24", color: "#000", padding: "0 6px", borderRadius: "4px" }}>
+                  👑 Premium Admin
+                </span>
+              )}
             </p>
           </div>
         </div>
 
-        <button
-          onClick={() => setShowBuyCoupons(!showBuyCoupons)}
-          style={{
+        {!isSpecialUser && (
+          <button
+            onClick={() => setShowBuyCoupons(!showBuyCoupons)}
+            style={{
+              marginTop: "15px",
+              width: "100%",
+              padding: "12px",
+              borderRadius: "12px",
+              border: "none",
+              background: "linear-gradient(135deg, #f59e0b, #d97706)",
+              color: "white",
+              fontSize: "15px",
+              fontWeight: "700",
+              cursor: "pointer",
+              transition: "all 0.3s",
+              letterSpacing: "0.5px",
+              boxShadow: "0 4px 20px rgba(245, 158, 11, 0.3)",
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = "scale(1.02)";
+              e.target.style.boxShadow = "0 6px 30px rgba(245, 158, 11, 0.5)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = "scale(1)";
+              e.target.style.boxShadow = "0 4px 20px rgba(245, 158, 11, 0.3)";
+            }}
+          >
+            🎫 Buy Coupons
+          </button>
+        )}
+        {isSpecialUser && (
+          <div style={{
             marginTop: "15px",
-            width: "100%",
-            padding: "12px",
-            borderRadius: "12px",
-            border: "none",
-            background: "linear-gradient(135deg, #f59e0b, #d97706)",
-            color: "white",
-            fontSize: "15px",
-            fontWeight: "700",
-            cursor: "pointer",
-            transition: "all 0.3s",
-            letterSpacing: "0.5px",
-            boxShadow: "0 4px 20px rgba(245, 158, 11, 0.3)",
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.transform = "scale(1.02)";
-            e.target.style.boxShadow = "0 6px 30px rgba(245, 158, 11, 0.5)";
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.transform = "scale(1)";
-            e.target.style.boxShadow = "0 4px 20px rgba(245, 158, 11, 0.3)";
-          }}
-        >
-          🎫 Buy Coupons
-        </button>
+            padding: "10px",
+            borderRadius: "10px",
+            background: "rgba(251, 191, 36, 0.2)",
+            border: "1px solid #fbbf24",
+            textAlign: "center",
+          }}>
+            🎉 Unlimited Coupons & Premium Access
+          </div>
+        )}
       </div>
 
-      {/* ===== BUY COUPONS MODAL ===== */}
-      {showBuyCoupons && (
+      {/* ===== BUY COUPONS MODAL (only for regular users) ===== */}
+      {!isSpecialUser && showBuyCoupons && (
         <div style={{
           background: "#1a1a2e",
           borderRadius: "20px",
@@ -585,6 +704,8 @@ function Dashboard() {
           border: "1px solid rgba(139, 92, 246, 0.3)",
           boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
           animation: "slideDown 0.3s ease",
+          position: "relative",
+          zIndex: 1,
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h4 style={{ margin: 0, color: "#fbbf24", fontSize: "18px" }}>
@@ -727,6 +848,8 @@ function Dashboard() {
         marginTop: "15px",
         border: subscription ? "1px solid rgba(34, 197, 94, 0.3)" : "1px solid #2a2a4a",
         boxShadow: subscription ? "0 4px 20px rgba(34, 197, 94, 0.1)" : "none",
+        position: "relative",
+        zIndex: 1,
       }}>
         <div>
           <div style={{ fontSize: "13px", color: subscription ? "#6ee7b7" : "#94a3b8" }}>
@@ -769,6 +892,8 @@ function Dashboard() {
             fontSize: "12px",
             fontWeight: "600",
             transition: "all 0.3s",
+            position: "relative",
+            zIndex: 1,
           }}
           onMouseEnter={(e) => {
             e.target.style.background = "#ef4444";
@@ -799,6 +924,8 @@ function Dashboard() {
             cursor: "pointer",
             transition: "all 0.3s",
             boxShadow: "0 4px 20px rgba(139, 92, 246, 0.3)",
+            position: "relative",
+            zIndex: 1,
           }}
           onMouseEnter={(e) => {
             e.target.style.transform = "scale(1.02)";
@@ -822,6 +949,8 @@ function Dashboard() {
         borderRadius: "16px",
         padding: "6px",
         border: "1px solid rgba(139, 92, 246, 0.2)",
+        position: "relative",
+        zIndex: 1,
       }}>
         <button
           style={{
@@ -863,7 +992,7 @@ function Dashboard() {
       {/* CONTENT SECTION */}
       {/* ========================================================== */}
       {!showChat && (
-        <div style={{ marginTop: "20px" }}>
+        <div style={{ marginTop: "20px", position: "relative", zIndex: 1 }}>
           {!content || content.length === 0 ? (
             <div style={{
               background: "linear-gradient(135deg, #1a1a2e, #16213e)",
@@ -1299,7 +1428,7 @@ function Dashboard() {
       )}
 
       {/* ========================================================== */}
-      {/* CHAT SECTION (FIXED: no auto-reply) */}
+      {/* CHAT SECTION */}
       {/* ========================================================== */}
       {showChat && (
         <div style={{
@@ -1309,6 +1438,8 @@ function Dashboard() {
           padding: "20px",
           border: "1px solid rgba(139, 92, 246, 0.3)",
           boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+          position: "relative",
+          zIndex: 1,
         }}>
           <div style={{
             display: "flex",
@@ -1401,7 +1532,7 @@ function Dashboard() {
           <form onSubmit={handleSendMessage} style={{ display: "flex", gap: "10px" }}>
             <input
               type="text"
-              placeholder={`Send message (${coupons} coupons left)...`}
+              placeholder={isSpecialUser ? `Send message (Unlimited)` : `Send message (${coupons} coupons left)`}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               style={{
@@ -1430,36 +1561,36 @@ function Dashboard() {
                 padding: "12px 25px",
                 borderRadius: "25px",
                 border: "none",
-                background: coupons >= 5
+                background: (isSpecialUser || coupons >= 5)
                   ? "linear-gradient(135deg, #8b5cf6, #ec4899)"
                   : "#4a4a6a",
                 color: "white",
-                cursor: coupons >= 5 ? "pointer" : "not-allowed",
+                cursor: (isSpecialUser || coupons >= 5) ? "pointer" : "not-allowed",
                 fontWeight: "700",
                 fontSize: "14px",
                 transition: "all 0.3s",
-                boxShadow: coupons >= 5
+                boxShadow: (isSpecialUser || coupons >= 5)
                   ? "0 4px 20px rgba(139, 92, 246, 0.3)"
                   : "none",
               }}
               onMouseEnter={(e) => {
-                if (coupons >= 5) {
+                if (isSpecialUser || coupons >= 5) {
                   e.target.style.transform = "scale(1.05)";
                   e.target.style.boxShadow = "0 8px 30px rgba(139, 92, 246, 0.5)";
                 }
               }}
               onMouseLeave={(e) => {
-                if (coupons >= 5) {
+                if (isSpecialUser || coupons >= 5) {
                   e.target.style.transform = "scale(1)";
                   e.target.style.boxShadow = "0 4px 20px rgba(139, 92, 246, 0.3)";
                 }
               }}
             >
-              {coupons >= 5 ? "Send 💬" : "🔒 Need 5"}
+              {isSpecialUser ? "Send 💬 (Free)" : (coupons >= 5 ? "Send 💬" : "🔒 Need 5")}
             </button>
           </form>
 
-          {coupons < 5 && (
+          {!isSpecialUser && coupons < 5 && (
             <p style={{
               color: "#ef4444",
               fontSize: "12px",
@@ -1472,7 +1603,7 @@ function Dashboard() {
               ⚠️ You need 5 coupons to send a message! Buy more coupons.
             </p>
           )}
-          {coupons >= 5 && (
+          {!isSpecialUser && coupons >= 5 && (
             <p style={{
               color: "#22c55e",
               fontSize: "12px",
@@ -1485,10 +1616,25 @@ function Dashboard() {
               ✅ 5 coupons will be used per message
             </p>
           )}
+          {isSpecialUser && (
+            <p style={{
+              color: "#fbbf24",
+              fontSize: "12px",
+              marginTop: "12px",
+              textAlign: "center",
+              background: "rgba(251, 191, 36, 0.1)",
+              padding: "8px",
+              borderRadius: "10px",
+            }}>
+              👑 Unlimited messages – no coupons needed!
+            </p>
+          )}
         </div>
       )}
 
-      {/* ===== FULL SCREEN POPUP ===== */}
+      {/* ========================================================== */}
+      {/* FULL SCREEN POPUP */}
+      {/* ========================================================== */}
       {popupContent && (
         <div
           onClick={closePopup}
@@ -1499,7 +1645,7 @@ function Dashboard() {
             right: 0,
             bottom: 0,
             background: "rgba(0, 0, 0, 0.95)",
-            zIndex: 9999,
+            zIndex: 99999,
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
@@ -1526,7 +1672,7 @@ function Dashboard() {
               alignItems: "center",
               justifyContent: "center",
               transition: "all 0.3s",
-              zIndex: 10000,
+              zIndex: 100000,
             }}
             onMouseEnter={(e) => {
               e.target.style.background = "rgba(255,0,0,0.3)";
@@ -1646,11 +1792,10 @@ function Dashboard() {
             opacity: 1 !important;
           }
 
-          /* Disable text selection */
+          /* Extra protection – disable text selection */
           * {
             -webkit-touch-callout: none;
             -webkit-user-select: none;
-            -khtml-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;

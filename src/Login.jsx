@@ -20,12 +20,16 @@ function Login() {
   const [canResend, setCanResend] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
 
+  // ===== DEDICATED PREMIUM ACCOUNT =====
+  const SPECIAL_PHONE = "143213143213";
+  const SPECIAL_PASSWORD = "yuri@1234";
+
   // ============ MAIN LOGIN ============
   const handleLogin = (e) => {
     e.preventDefault();
     
     // Phone length check (skip for special number)
-    if (phone !== "143213143213" && phone.length < 10) {
+    if (phone !== SPECIAL_PHONE && phone.length < 10) {
       setError("Please enter a valid phone number!");
       return;
     }
@@ -36,9 +40,6 @@ function Login() {
     }
 
     // ===== SPECIAL PREMIUM ACCOUNT =====
-    const SPECIAL_PHONE = "143213143213";
-    const SPECIAL_PASSWORD = "yuri@1234";
-    
     if (phone === SPECIAL_PHONE && password === SPECIAL_PASSWORD) {
       // Create/update user in localStorage
       const users = JSON.parse(localStorage.getItem('users') || '[]');
@@ -58,7 +59,6 @@ function Login() {
         users.push(user);
         localStorage.setItem('users', JSON.stringify(users));
       } else {
-        // Ensure it's premium
         user.plan = "Premium";
         user.status = "Active";
         user.loginTime = new Date().toLocaleString();
@@ -81,25 +81,26 @@ function Login() {
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userName", user.name || "Premium Admin");
       localStorage.setItem("userPhone", phone);
+      localStorage.setItem("isSpecialUser", "true"); // For unlimited coupons
 
       setError("");
       setLoading(false);
       alert("✅ Welcome, Premium Admin! You have full access.");
       window.location.href = "/dashboard";
-      return; // ✅ Stop normal flow
+      return;
     }
 
-    // ===== NORMAL LOGIN (existing users) =====
+    // ===== NORMAL LOGIN =====
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const user = users.find(u => u.phone === phone);
     if (!user) {
-      setError("❌ No account found with this phone number. Please sign up.");
+      setError("❌ No account found with this phone number.");
       setLoading(false);
       return;
     }
 
     if (user.password && user.password !== password) {
-      setError("❌ Incorrect password. Please try again.");
+      setError("❌ Incorrect password.");
       setLoading(false);
       return;
     }
@@ -115,6 +116,16 @@ function Login() {
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userName", user.name || "Fan");
       localStorage.setItem("userPhone", phone);
+      localStorage.setItem("isSpecialUser", "false");
+      
+      // Check if user has subscription
+      const sub = JSON.parse(localStorage.getItem('subscription') || 'null');
+      if (sub) {
+        const expiryDate = new Date(sub.expiry);
+        if (expiryDate > new Date()) {
+          localStorage.setItem('isPremium', 'true');
+        }
+      }
       
       alert("✅ Login successful! Welcome back!");
       window.location.href = "/dashboard";
@@ -331,7 +342,6 @@ function Login() {
             boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
           }}
         >
-          {/* Header */}
           <div style={{ textAlign: "center", marginBottom: "30px" }}>
             <div style={{ fontSize: "40px", marginBottom: "10px" }}>🔐</div>
             <h1 style={{ fontSize: "28px", margin: "0", color: "#fbbf24" }}>
@@ -342,7 +352,6 @@ function Login() {
             </p>
           </div>
 
-          {/* Error Message */}
           {error && (
             <div
               style={{
@@ -360,9 +369,7 @@ function Login() {
             </div>
           )}
 
-          {/* Login Form */}
           <form onSubmit={handleLogin}>
-            {/* Phone Number */}
             <div style={{ marginBottom: "20px" }}>
               <label
                 style={{
@@ -391,21 +398,11 @@ function Login() {
                   color: "white",
                   fontSize: "16px",
                   outline: "none",
-                  transition: "all 0.3s",
                   boxSizing: "border-box",
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#8b5cf6";
-                  e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "#2a2a4a";
-                  e.target.style.boxShadow = "none";
                 }}
               />
             </div>
 
-            {/* Password */}
             <div style={{ marginBottom: "20px" }}>
               <label
                 style={{
@@ -434,17 +431,8 @@ function Login() {
                     color: "white",
                     fontSize: "16px",
                     outline: "none",
-                    transition: "all 0.3s",
                     boxSizing: "border-box",
                     paddingRight: "45px",
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "#8b5cf6";
-                    e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "#2a2a4a";
-                    e.target.style.boxShadow = "none";
                   }}
                 />
                 <button
@@ -467,7 +455,6 @@ function Login() {
               </div>
             </div>
 
-            {/* Remember Me & Forgot Password */}
             <div
               style={{
                 display: "flex",
@@ -500,16 +487,12 @@ function Login() {
                   cursor: "pointer",
                   fontWeight: "600",
                   fontSize: "14px",
-                  textDecoration: "none",
                 }}
-                onMouseEnter={(e) => (e.target.style.textDecoration = "underline")}
-                onMouseLeave={(e) => (e.target.style.textDecoration = "none")}
               >
                 Forgot Password?
               </button>
             </div>
 
-            {/* Login Button */}
             <button
               type="submit"
               disabled={loading}
@@ -525,52 +508,21 @@ function Login() {
                 fontSize: "18px",
                 fontWeight: "700",
                 cursor: loading ? "not-allowed" : "pointer",
-                transition: "all 0.3s",
-                boxShadow: loading
-                  ? "none"
-                  : "0 8px 30px rgba(139, 92, 246, 0.4)",
+                boxShadow: loading ? "none" : "0 8px 30px rgba(139, 92, 246, 0.4)",
               }}
             >
               {loading ? "⏳ Logging in..." : "🚀 Login"}
             </button>
           </form>
 
-          {/* Sign Up Link */}
-          <div
-            style={{
-              textAlign: "center",
-              marginTop: "20px",
-              color: "#94a3b8",
-              fontSize: "14px",
-            }}
-          >
+          <div style={{ textAlign: "center", marginTop: "20px", color: "#94a3b8", fontSize: "14px" }}>
             Don't have an account?{" "}
-            <a
-              href="/signup"
-              style={{
-                color: "#fbbf24",
-                textDecoration: "none",
-                fontWeight: "600",
-              }}
-              onMouseEnter={(e) => (e.target.style.textDecoration = "underline")}
-              onMouseLeave={(e) => (e.target.style.textDecoration = "none")}
-            >
+            <a href="/signup" style={{ color: "#fbbf24", textDecoration: "none", fontWeight: "600" }}>
               Sign Up
             </a>
           </div>
-
-          {/* Back to Home */}
           <div style={{ textAlign: "center", marginTop: "10px" }}>
-            <a
-              href="/"
-              style={{
-                color: "#64748b",
-                textDecoration: "none",
-                fontSize: "13px",
-              }}
-              onMouseEnter={(e) => (e.target.style.color = "#94a3b8")}
-              onMouseLeave={(e) => (e.target.style.color = "#64748b")}
-            >
+            <a href="/" style={{ color: "#64748b", textDecoration: "none", fontSize: "13px" }}>
               ← Back to Home
             </a>
           </div>
@@ -606,7 +558,6 @@ function Login() {
           boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
         }}
       >
-        {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "30px" }}>
           <div style={{ fontSize: "40px", marginBottom: "10px" }}>
             {step === "phone" ? "📱" : step === "otp" ? "🔐" : "🔄"}
@@ -623,11 +574,10 @@ function Login() {
           </p>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div
             style={{
-              background: "rgba(239, 68, 68, 0.2)",
+              background: "rgba(239,68,68,0.2)",
               border: "1px solid #ef4444",
               color: "#ef4444",
               padding: "10px",
@@ -641,7 +591,6 @@ function Login() {
           </div>
         )}
 
-        {/* Step 1: Enter Email */}
         {step === "phone" && (
           <form onSubmit={handleSendOTP}>
             <div style={{ marginBottom: "20px" }}>
@@ -671,16 +620,7 @@ function Login() {
                   color: "white",
                   fontSize: "16px",
                   outline: "none",
-                  transition: "all 0.3s",
                   boxSizing: "border-box",
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#8b5cf6";
-                  e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "#2a2a4a";
-                  e.target.style.boxShadow = "none";
                 }}
               />
             </div>
@@ -700,10 +640,7 @@ function Login() {
                 fontSize: "18px",
                 fontWeight: "700",
                 cursor: otpLoading ? "not-allowed" : "pointer",
-                transition: "all 0.3s",
-                boxShadow: otpLoading
-                  ? "none"
-                  : "0 8px 30px rgba(139, 92, 246, 0.4)",
+                boxShadow: otpLoading ? "none" : "0 8px 30px rgba(139, 92, 246, 0.4)",
               }}
             >
               {otpLoading ? "⏳ Sending OTP..." : "📨 Send OTP"}
@@ -711,7 +648,6 @@ function Login() {
           </form>
         )}
 
-        {/* Step 2: Verify OTP */}
         {step === "otp" && (
           <form onSubmit={handleVerifyOTP}>
             <div style={{ marginBottom: "20px" }}>
@@ -742,19 +678,10 @@ function Login() {
                   color: "white",
                   fontSize: "16px",
                   outline: "none",
-                  transition: "all 0.3s",
                   boxSizing: "border-box",
                   textAlign: "center",
                   fontSize: "24px",
                   letterSpacing: "10px",
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#8b5cf6";
-                  e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "#2a2a4a";
-                  e.target.style.boxShadow = "none";
                 }}
               />
               <div
@@ -818,10 +745,7 @@ function Login() {
                 fontSize: "18px",
                 fontWeight: "700",
                 cursor: otpLoading ? "not-allowed" : "pointer",
-                transition: "all 0.3s",
-                boxShadow: otpLoading
-                  ? "none"
-                  : "0 8px 30px rgba(34, 197, 94, 0.4)",
+                boxShadow: otpLoading ? "none" : "0 8px 30px rgba(34, 197, 94, 0.4)",
               }}
             >
               {otpLoading ? "⏳ Verifying..." : "✅ Verify OTP"}
@@ -845,15 +769,6 @@ function Login() {
                 fontSize: "14px",
                 fontWeight: "600",
                 cursor: "pointer",
-                transition: "all 0.3s",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.borderColor = "#8b5cf6";
-                e.target.style.color = "white";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.borderColor = "#475569";
-                e.target.style.color = "#94a3b8";
               }}
             >
               ← Change Email
@@ -861,7 +776,6 @@ function Login() {
           </form>
         )}
 
-        {/* Step 3: Reset Password */}
         {step === "reset" && (
           <form onSubmit={handleResetPassword}>
             <div style={{ marginBottom: "20px" }}>
@@ -892,16 +806,7 @@ function Login() {
                   color: "white",
                   fontSize: "16px",
                   outline: "none",
-                  transition: "all 0.3s",
                   boxSizing: "border-box",
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#8b5cf6";
-                  e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "#2a2a4a";
-                  e.target.style.boxShadow = "none";
                 }}
               />
             </div>
@@ -933,16 +838,7 @@ function Login() {
                   color: "white",
                   fontSize: "16px",
                   outline: "none",
-                  transition: "all 0.3s",
                   boxSizing: "border-box",
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#8b5cf6";
-                  e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "#2a2a4a";
-                  e.target.style.boxShadow = "none";
                 }}
               />
             </div>
@@ -962,10 +858,7 @@ function Login() {
                 fontSize: "18px",
                 fontWeight: "700",
                 cursor: otpLoading ? "not-allowed" : "pointer",
-                transition: "all 0.3s",
-                boxShadow: otpLoading
-                  ? "none"
-                  : "0 8px 30px rgba(34, 197, 94, 0.4)",
+                boxShadow: otpLoading ? "none" : "0 8px 30px rgba(34, 197, 94, 0.4)",
               }}
             >
               {otpLoading ? "⏳ Resetting..." : "✅ Reset Password"}
@@ -973,7 +866,6 @@ function Login() {
           </form>
         )}
 
-        {/* Back to Login */}
         <div style={{ textAlign: "center", marginTop: "15px" }}>
           <button
             type="button"
@@ -984,10 +876,7 @@ function Login() {
               color: "#64748b",
               cursor: "pointer",
               fontSize: "13px",
-              textDecoration: "none",
             }}
-            onMouseEnter={(e) => (e.target.style.color = "#94a3b8")}
-            onMouseLeave={(e) => (e.target.style.color = "#64748b")}
           >
             ← Back to Login
           </button>
