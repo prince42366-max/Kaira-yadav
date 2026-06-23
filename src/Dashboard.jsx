@@ -32,13 +32,12 @@ function Dashboard() {
 
   // ===== HARDCODED CONTENT (Photos & Videos from public folder) =====
   const hardcodedContent = [
-    // Photos
     {
       id: 1,
       type: "📸 Photo",
       title: "Exclusive Photo 1",
       date: new Date().toLocaleDateString(),
-      file: "/profile.jpg.jpeg",    // Place your photo in public/photo1.jpg
+      file: "/photo1.jpg",
       fileType: "image",
       likes: 0,
       liked: false,
@@ -69,13 +68,12 @@ function Dashboard() {
       views: 0,
       stickers: []
     },
-    // Videos
     {
       id: 4,
       type: "🎬 Video",
       title: "Exclusive Video 1",
       date: new Date().toLocaleDateString(),
-      file: "prevew 3.mp4",    // Place your video in public/video1.mp4
+      file: "/video1.mp4",
       fileType: "video",
       likes: 0,
       liked: false,
@@ -100,27 +98,21 @@ function Dashboard() {
   const [content, setContent] = useState(() => {
     const saved = localStorage.getItem('uploadedContent');
     const adminContent = saved ? JSON.parse(saved) : [];
-    // Merge: hardcoded first, then admin content (or vice versa)
     return [...hardcodedContent, ...adminContent];
   });
 
-  // Save content to localStorage whenever it changes (so admin uploads persist)
   useEffect(() => {
-    // We only want to save admin content, not hardcoded, to avoid duplication.
-    // Extract admin content (items with id > 5 or from localStorage)
     const adminItems = content.filter(item => item.id > 5);
     localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
   }, [content]);
 
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // ===== LOAD CONTENT =====
   const loadContent = () => {
     try {
       const saved = localStorage.getItem('uploadedContent');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Merge with hardcoded again (in case new admin content added)
         const merged = [...hardcodedContent, ...parsed];
         setContent(merged);
       } else {
@@ -209,11 +201,73 @@ function Dashboard() {
     window.location.href = "/login";
   };
 
-  const buyCoupons = (amount, price) => {
-    const newCoupons = coupons + amount;
-    setCoupons(newCoupons);
-    localStorage.setItem('userCoupons', JSON.stringify(newCoupons));
-    alert(`✅ Purchased ${amount} coupons for ₹${price}! Total: ${newCoupons}`);
+  // ===== LOAD RAZORPAY SCRIPT =====
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // ===== BUY COUPONS WITH REAL PAYMENT =====
+  const buyCoupons = async (amount, price, couponCount) => {
+    // amount in rupees, price display, couponCount
+    const isScriptLoaded = await loadRazorpayScript();
+    if (!isScriptLoaded) {
+      alert("❌ Payment gateway failed to load. Please try again.");
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amount * 100, // paise
+          currency: 'INR',
+          receipt: `coupon_${Date.now()}`,
+        }),
+      });
+
+      const order = await response.json();
+      if (!order.id) {
+        alert("❌ Failed to create order. Please try again.");
+        return;
+      }
+
+      const options = {
+        key: "rzp_live_T4fhMs1b6pXETJ", // 🔴 CHANGE TO YOUR LIVE KEY ID
+        amount: amount * 100,
+        currency: "INR",
+        name: "Kaira Yadav Fan Platform",
+        description: `${couponCount} Coupons`,
+        order_id: order.id,
+        handler: function(response) {
+          const newCoupons = coupons + couponCount;
+          setCoupons(newCoupons);
+          localStorage.setItem('userCoupons', JSON.stringify(newCoupons));
+          alert(`✅ Payment successful! ${couponCount} coupons added! 🎉`);
+        },
+        prefill: {
+          name: "Fan",
+          email: "fan@example.com",
+          contact: "9876543210"
+        },
+        theme: {
+          color: "#8b5cf6"
+        }
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+
+    } catch (error) {
+      console.error("Payment error:", error);
+      alert("❌ Something went wrong. Please try again.");
+    }
   };
 
   const handleLike = (contentId) => {
@@ -236,7 +290,6 @@ function Dashboard() {
         : c
     );
     setContent(updatedContent);
-    // Save admin content only (keep hardcoded intact)
     const adminItems = updatedContent.filter(item => item.id > 5);
     localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
   };
@@ -549,7 +602,7 @@ function Dashboard() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "15px" }}>
             <button
-              onClick={() => buyCoupons(10, 15)}
+              onClick={() => buyCoupons(15, 15, 10)} // amount, price, couponCount
               style={{
                 padding: "15px",
                 borderRadius: "12px",
@@ -579,7 +632,7 @@ function Dashboard() {
             </button>
 
             <button
-              onClick={() => buyCoupons(25, 30)}
+              onClick={() => buyCoupons(30, 30, 25)}
               style={{
                 padding: "15px",
                 borderRadius: "12px",
@@ -609,7 +662,7 @@ function Dashboard() {
             </button>
 
             <button
-              onClick={() => buyCoupons(50, 50)}
+              onClick={() => buyCoupons(50, 50, 50)}
               style={{
                 padding: "15px",
                 borderRadius: "12px",
