@@ -34,32 +34,34 @@ function Login() {
       return;
     }
 
+    // ===== CHECK IF USER EXISTS =====
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const user = users.find(u => u.phone === phone);
+    if (!user) {
+      setError("❌ No account found with this phone number. Please sign up.");
+      setLoading(false);
+      return;
+    }
+
+    // ===== CHECK PASSWORD =====
+    if (user.password && user.password !== password) {
+      setError("❌ Incorrect password. Please try again.");
+      setLoading(false);
+      return;
+    }
+
     setError("");
     setLoading(true);
     
     setTimeout(() => {
       setLoading(false);
       
-      // ===== SAVE USER DATA =====
-      const userData = {
-        id: Date.now(),
-        name: "Fan",
-        phone: phone,
-        plan: "Free",
-        status: "Active",
-        joined: new Date().toLocaleDateString(),
-        loginTime: new Date().toLocaleString()
-      };
-      
-      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-      const userExists = existingUsers.find(u => u.phone === phone);
-      if (!userExists) {
-        existingUsers.push(userData);
-        localStorage.setItem('users', JSON.stringify(existingUsers));
-      }
+      // Update login time
+      user.loginTime = new Date().toLocaleString();
+      localStorage.setItem('users', JSON.stringify(users));
       
       localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("userName", "Fan");
+      localStorage.setItem("userName", user.name || "Fan");
       localStorage.setItem("userPhone", phone);
       
       alert("✅ Login successful! Welcome back!");
@@ -73,6 +75,15 @@ function Login() {
     
     if (forgotPhone.length < 10) {
       setError("Please enter a valid 10-digit phone number!");
+      return;
+    }
+
+    // ===== CHECK IF USER EXISTS =====
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const userExists = users.find(u => u.phone === forgotPhone);
+    if (!userExists) {
+      setError("❌ No account found with this phone number.");
+      setOtpLoading(false);
       return;
     }
 
@@ -114,24 +125,6 @@ function Login() {
     setTimeout(() => {
       setOtpLoading(false);
       if (otp === "123456" || otp.length >= 4) {
-        // ===== SAVE USER DATA FOR OTP LOGIN =====
-        const userData = {
-          id: Date.now(),
-          name: "Fan",
-          phone: forgotPhone,
-          plan: "Free",
-          status: "Active",
-          joined: new Date().toLocaleDateString(),
-          loginTime: new Date().toLocaleString()
-        };
-        
-        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-        const userExists = existingUsers.find(u => u.phone === forgotPhone);
-        if (!userExists) {
-          existingUsers.push(userData);
-          localStorage.setItem('users', JSON.stringify(existingUsers));
-        }
-        
         setStep("reset");
         alert("✅ OTP verified! Please set your new password.");
       } else {
@@ -152,6 +145,14 @@ function Login() {
     if (newPassword !== confirmNewPassword) {
       setError("Passwords do not match!");
       return;
+    }
+
+    // ===== UPDATE USER PASSWORD =====
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const userIndex = users.findIndex(u => u.phone === forgotPhone);
+    if (userIndex !== -1) {
+      users[userIndex].password = newPassword;
+      localStorage.setItem('users', JSON.stringify(users));
     }
 
     setError("");

@@ -61,12 +61,12 @@ function SignUp() {
     setError("");
     setOtpLoading(true);
     
-    // Store user data for later
+    // Store user data for later (including password)
     setUserData({
       name,
       phone,
       email,
-      password,
+      password, // ✅ Save password
     });
 
     // Simulate sending OTP
@@ -116,6 +116,7 @@ function SignUp() {
           name: userData.name,
           phone: userData.phone,
           email: userData.email,
+          password: userData.password, // ✅ Save password
           plan: "Free",
           status: "Active",
           joined: new Date().toLocaleDateString(),
@@ -171,7 +172,7 @@ function SignUp() {
   };
 
   // ============================================================
-  // LOGIN SCREEN
+  // SIGN UP FORM
   // ============================================================
   if (step === "form") {
     return (
