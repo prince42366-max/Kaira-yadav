@@ -12,17 +12,17 @@ function SignUp() {
   const [error, setError] = useState("");
 
   // ===== OTP STATES =====
-  const [step, setStep] = useState("form"); // "form" or "otp"
+  const [step, setStep] = useState("form");
   const [otp, setOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
-  const [userData, setUserData] = useState(null); // Store user data for final signup
+  const [userData, setUserData] = useState(null);
 
   // ============================================================
-  // HANDLE FORM SUBMIT - SEND OTP
+  // HANDLE FORM SUBMIT - SEND OTP VIA EMAIL
   // ============================================================
-  const handleSignUp = (e) => {
+  const handleSignUp = async (e) => {
     e.preventDefault();
     
     if (name.length < 2) {
@@ -50,7 +50,6 @@ function SignUp() {
       return;
     }
 
-    // Check if user already exists
     const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
     const userExists = existingUsers.find(u => u.phone === phone || u.email === email);
     if (userExists) {
@@ -61,34 +60,53 @@ function SignUp() {
     setError("");
     setOtpLoading(true);
     
-    // Store user data for later (including password)
     setUserData({
       name,
       phone,
       email,
-      password, // ✅ Save password
+      password,
     });
 
-    // Simulate sending OTP
-    setTimeout(() => {
-      setOtpLoading(false);
-      setStep("otp");
-      setTimer(30);
-      setCanResend(false);
-      alert(`📱 OTP sent to ${phone}! (Demo: 123456)`);
+    // ===== SEND OTP VIA EMAIL =====
+    try {
+      const response = await fetch('/api/send-otp-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+      });
+
+      const data = await response.json();
       
-      // Start countdown
-      const countdown = setInterval(() => {
-        setTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(countdown);
-            setCanResend(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }, 1500);
+      if (data.success) {
+        localStorage.setItem('otp_verification', JSON.stringify({
+          email: email,
+          otp: data.otp,
+          timestamp: Date.now()
+        }));
+        
+        setStep("otp");
+        setTimer(30);
+        setCanResend(false);
+        alert(`✅ OTP sent to ${email}! Please check your email.`);
+        
+        const countdown = setInterval(() => {
+          setTimer((prev) => {
+            if (prev <= 1) {
+              clearInterval(countdown);
+              setCanResend(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        setError(data.error || "Failed to send OTP. Please try again.");
+      }
+    } catch (error) {
+      setError("Network error. Please try again.");
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
   // ============================================================
@@ -105,18 +123,26 @@ function SignUp() {
     setError("");
     setOtpLoading(true);
     
+    const stored = JSON.parse(localStorage.getItem('otp_verification') || '{}');
+    const storedOTP = stored.otp;
+    const timestamp = stored.timestamp;
+
+    if (!storedOTP || Date.now() - timestamp > 300000) {
+      setError("OTP expired. Please request a new one.");
+      setOtpLoading(false);
+      return;
+    }
+
     setTimeout(() => {
       setOtpLoading(false);
       
-      // Demo OTP: 123456
-      if (otp === "123456" || otp.length >= 4) {
-        // ===== SAVE USER DATA =====
+      if (otp === storedOTP) {
         const userDataToSave = {
           id: Date.now(),
           name: userData.name,
           phone: userData.phone,
           email: userData.email,
-          password: userData.password, // ✅ Save password
+          password: userData.password,
           plan: "Free",
           status: "Active",
           joined: new Date().toLocaleDateString(),
@@ -127,10 +153,11 @@ function SignUp() {
         existingUsers.push(userDataToSave);
         localStorage.setItem('users', JSON.stringify(existingUsers));
         
-        // Save login session
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("userName", userData.name);
         localStorage.setItem("userPhone", userData.phone);
+        
+        localStorage.removeItem('otp_verification');
         
         alert("✅ Account created successfully! Welcome aboard! 🎉");
         window.location.href = "/dashboard";
@@ -143,12 +170,33 @@ function SignUp() {
   // ============================================================
   // RESEND OTP
   // ============================================================
-  const handleResendOTP = () => {
+  const handleResendOTP = async () => {
     if (!canResend) return;
     
     setTimer(30);
     setCanResend(false);
-    alert(`📱 New OTP sent to ${phone}! (Demo: 123456)`);
+    
+    try {
+      const response = await fetch('/api/send-otp-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        localStorage.setItem('otp_verification', JSON.stringify({
+          email: email,
+          otp: data.otp,
+          timestamp: Date.now()
+        }));
+        alert(`✅ New OTP sent to ${email}!`);
+      } else {
+        alert("Failed to resend OTP.");
+      }
+    } catch (error) {
+      alert("Network error.");
+    }
     
     const countdown = setInterval(() => {
       setTimer((prev) => {
@@ -176,30 +224,25 @@ function SignUp() {
   // ============================================================
   if (step === "form") {
     return (
-      <div
-        style={{
-          background: "#0a0a0f",
-          color: "white",
-          minHeight: "100vh",
-          fontFamily: "'Segoe UI', Arial, sans-serif",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: "20px",
-        }}
-      >
-        <div
-          style={{
-            background: "#1a1a2e",
-            padding: "40px",
-            borderRadius: "20px",
-            maxWidth: "400px",
-            width: "100%",
-            border: "1px solid #2a2a4a",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
-          }}
-        >
-          {/* Header */}
+      <div style={{
+        background: "#0a0a0f",
+        color: "white",
+        minHeight: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        fontFamily: "'Segoe UI', Arial, sans-serif",
+        padding: "20px",
+      }}>
+        <div style={{
+          background: "#1a1a2e",
+          padding: "40px",
+          borderRadius: "20px",
+          maxWidth: "400px",
+          width: "100%",
+          border: "1px solid #2a2a4a",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
+        }}>
           <div style={{ textAlign: "center", marginBottom: "30px" }}>
             <div style={{ fontSize: "40px", marginBottom: "10px" }}>✨</div>
             <h1 style={{ fontSize: "28px", margin: "0", color: "#fbbf24" }}>
@@ -210,37 +253,24 @@ function SignUp() {
             </p>
           </div>
 
-          {/* Error Message */}
           {error && (
-            <div
-              style={{
-                background: "rgba(239, 68, 68, 0.2)",
-                border: "1px solid #ef4444",
-                color: "#ef4444",
-                padding: "10px",
-                borderRadius: "8px",
-                marginBottom: "20px",
-                fontSize: "14px",
-                textAlign: "center",
-              }}
-            >
+            <div style={{
+              background: "rgba(239,68,68,0.2)",
+              border: "1px solid #ef4444",
+              color: "#ef4444",
+              padding: "10px",
+              borderRadius: "8px",
+              marginBottom: "20px",
+              fontSize: "14px",
+              textAlign: "center",
+            }}>
               {error}
             </div>
           )}
 
-          {/* Sign Up Form */}
           <form onSubmit={handleSignUp}>
-            {/* Full Name */}
             <div style={{ marginBottom: "15px" }}>
-              <label
-                style={{
-                  display: "block",
-                  color: "#94a3b8",
-                  fontSize: "14px",
-                  marginBottom: "5px",
-                  fontWeight: "600",
-                }}
-              >
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "14px", marginBottom: "5px", fontWeight: "600" }}>
                 👤 Full Name
               </label>
               <input
@@ -258,31 +288,15 @@ function SignUp() {
                   color: "white",
                   fontSize: "16px",
                   outline: "none",
-                  transition: "all 0.3s",
                   boxSizing: "border-box",
                 }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#8b5cf6";
-                  e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "#2a2a4a";
-                  e.target.style.boxShadow = "none";
-                }}
+                onFocus={(e) => { e.target.style.borderColor = "#8b5cf6"; e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)"; }}
+                onBlur={(e) => { e.target.style.borderColor = "#2a2a4a"; e.target.style.boxShadow = "none"; }}
               />
             </div>
 
-            {/* Phone Number */}
             <div style={{ marginBottom: "15px" }}>
-              <label
-                style={{
-                  display: "block",
-                  color: "#94a3b8",
-                  fontSize: "14px",
-                  marginBottom: "5px",
-                  fontWeight: "600",
-                }}
-              >
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "14px", marginBottom: "5px", fontWeight: "600" }}>
                 📞 Phone Number
               </label>
               <input
@@ -301,34 +315,18 @@ function SignUp() {
                   color: "white",
                   fontSize: "16px",
                   outline: "none",
-                  transition: "all 0.3s",
                   boxSizing: "border-box",
                 }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#8b5cf6";
-                  e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "#2a2a4a";
-                  e.target.style.boxShadow = "none";
-                }}
+                onFocus={(e) => { e.target.style.borderColor = "#8b5cf6"; e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)"; }}
+                onBlur={(e) => { e.target.style.borderColor = "#2a2a4a"; e.target.style.boxShadow = "none"; }}
               />
               <div style={{ color: "#64748b", fontSize: "12px", marginTop: "5px" }}>
                 Enter 10-digit phone number
               </div>
             </div>
 
-            {/* Email */}
             <div style={{ marginBottom: "15px" }}>
-              <label
-                style={{
-                  display: "block",
-                  color: "#94a3b8",
-                  fontSize: "14px",
-                  marginBottom: "5px",
-                  fontWeight: "600",
-                }}
-              >
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "14px", marginBottom: "5px", fontWeight: "600" }}>
                 ✉️ Email Address
               </label>
               <input
@@ -346,31 +344,15 @@ function SignUp() {
                   color: "white",
                   fontSize: "16px",
                   outline: "none",
-                  transition: "all 0.3s",
                   boxSizing: "border-box",
                 }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#8b5cf6";
-                  e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "#2a2a4a";
-                  e.target.style.boxShadow = "none";
-                }}
+                onFocus={(e) => { e.target.style.borderColor = "#8b5cf6"; e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)"; }}
+                onBlur={(e) => { e.target.style.borderColor = "#2a2a4a"; e.target.style.boxShadow = "none"; }}
               />
             </div>
 
-            {/* Password */}
             <div style={{ marginBottom: "15px" }}>
-              <label
-                style={{
-                  display: "block",
-                  color: "#94a3b8",
-                  fontSize: "14px",
-                  marginBottom: "5px",
-                  fontWeight: "600",
-                }}
-              >
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "14px", marginBottom: "5px", fontWeight: "600" }}>
                 🔑 Password
               </label>
               <div style={{ position: "relative" }}>
@@ -390,18 +372,11 @@ function SignUp() {
                     color: "white",
                     fontSize: "16px",
                     outline: "none",
-                    transition: "all 0.3s",
                     boxSizing: "border-box",
                     paddingRight: "45px",
                   }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "#8b5cf6";
-                    e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "#2a2a4a";
-                    e.target.style.boxShadow = "none";
-                  }}
+                  onFocus={(e) => { e.target.style.borderColor = "#8b5cf6"; e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)"; }}
+                  onBlur={(e) => { e.target.style.borderColor = "#2a2a4a"; e.target.style.boxShadow = "none"; }}
                 />
                 <button
                   type="button"
@@ -423,17 +398,8 @@ function SignUp() {
               </div>
             </div>
 
-            {/* Confirm Password */}
             <div style={{ marginBottom: "25px" }}>
-              <label
-                style={{
-                  display: "block",
-                  color: "#94a3b8",
-                  fontSize: "14px",
-                  marginBottom: "5px",
-                  fontWeight: "600",
-                }}
-              >
+              <label style={{ display: "block", color: "#94a3b8", fontSize: "14px", marginBottom: "5px", fontWeight: "600" }}>
                 🔒 Confirm Password
               </label>
               <input
@@ -451,21 +417,13 @@ function SignUp() {
                   color: "white",
                   fontSize: "16px",
                   outline: "none",
-                  transition: "all 0.3s",
                   boxSizing: "border-box",
                 }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#8b5cf6";
-                  e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "#2a2a4a";
-                  e.target.style.boxShadow = "none";
-                }}
+                onFocus={(e) => { e.target.style.borderColor = "#8b5cf6"; e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)"; }}
+                onBlur={(e) => { e.target.style.borderColor = "#2a2a4a"; e.target.style.boxShadow = "none"; }}
               />
             </div>
 
-            {/* Sign Up Button */}
             <button
               type="submit"
               disabled={otpLoading}
@@ -474,76 +432,36 @@ function SignUp() {
                 padding: "14px",
                 borderRadius: "50px",
                 border: "none",
-                background: otpLoading
-                  ? "#4a4a6a"
-                  : "linear-gradient(135deg, #8b5cf6, #ec4899)",
+                background: otpLoading ? "#4a4a6a" : "linear-gradient(135deg, #8b5cf6, #ec4899)",
                 color: "white",
                 fontSize: "18px",
                 fontWeight: "700",
                 cursor: otpLoading ? "not-allowed" : "pointer",
-                transition: "all 0.3s",
-                boxShadow: otpLoading
-                  ? "none"
-                  : "0 8px 30px rgba(139, 92, 246, 0.4)",
+                boxShadow: otpLoading ? "none" : "0 8px 30px rgba(139, 92, 246, 0.4)",
               }}
               onMouseEnter={(e) => {
-                if (!otpLoading) {
-                  e.target.style.transform = "scale(1.02)";
-                  e.target.style.boxShadow = "0 12px 40px rgba(139, 92, 246, 0.6)";
-                }
+                if (!otpLoading) { e.target.style.transform = "scale(1.02)"; e.target.style.boxShadow = "0 12px 40px rgba(139, 92, 246, 0.6)"; }
               }}
               onMouseLeave={(e) => {
-                if (!otpLoading) {
-                  e.target.style.transform = "scale(1)";
-                  e.target.style.boxShadow = "0 8px 30px rgba(139, 92, 246, 0.4)";
-                }
+                if (!otpLoading) { e.target.style.transform = "scale(1)"; e.target.style.boxShadow = "0 8px 30px rgba(139, 92, 246, 0.4)"; }
               }}
             >
               {otpLoading ? "⏳ Sending OTP..." : "📨 Sign Up"}
             </button>
           </form>
 
-          {/* Login Link */}
-          <div
-            style={{
-              textAlign: "center",
-              marginTop: "20px",
-              color: "#94a3b8",
-              fontSize: "14px",
-            }}
-          >
+          <div style={{ textAlign: "center", marginTop: "20px", color: "#94a3b8", fontSize: "14px" }}>
             Already have an account?{" "}
-            <a
-              href="/login"
-              style={{
-                color: "#fbbf24",
-                textDecoration: "none",
-                fontWeight: "600",
-              }}
-              onMouseEnter={(e) => (e.target.style.textDecoration = "underline")}
-              onMouseLeave={(e) => (e.target.style.textDecoration = "none")}
-            >
+            <a href="/login" style={{ color: "#fbbf24", textDecoration: "none", fontWeight: "600" }}
+              onMouseEnter={(e) => e.target.style.textDecoration = "underline"}
+              onMouseLeave={(e) => e.target.style.textDecoration = "none"}>
               Sign In
             </a>
           </div>
-
-          {/* Back to Home */}
-          <div
-            style={{
-              textAlign: "center",
-              marginTop: "10px",
-            }}
-          >
-            <a
-              href="/"
-              style={{
-                color: "#64748b",
-                textDecoration: "none",
-                fontSize: "13px",
-              }}
-              onMouseEnter={(e) => (e.target.style.color = "#94a3b8")}
-              onMouseLeave={(e) => (e.target.style.color = "#64748b")}
-            >
+          <div style={{ textAlign: "center", marginTop: "10px" }}>
+            <a href="/" style={{ color: "#64748b", textDecoration: "none", fontSize: "13px" }}
+              onMouseEnter={(e) => e.target.style.color = "#94a3b8"}
+              onMouseLeave={(e) => e.target.style.color = "#64748b"}>
               ← Back to Home
             </a>
           </div>
@@ -556,70 +474,53 @@ function SignUp() {
   // OTP VERIFICATION SCREEN
   // ============================================================
   return (
-    <div
-      style={{
-        background: "#0a0a0f",
-        color: "white",
-        minHeight: "100vh",
-        fontFamily: "'Segoe UI', Arial, sans-serif",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: "20px",
-      }}
-    >
-      <div
-        style={{
-          background: "#1a1a2e",
-          padding: "40px",
-          borderRadius: "20px",
-          maxWidth: "400px",
-          width: "100%",
-          border: "1px solid #2a2a4a",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
-        }}
-      >
-        {/* Header */}
+    <div style={{
+      background: "#0a0a0f",
+      color: "white",
+      minHeight: "100vh",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      fontFamily: "'Segoe UI', Arial, sans-serif",
+      padding: "20px",
+    }}>
+      <div style={{
+        background: "#1a1a2e",
+        padding: "40px",
+        borderRadius: "20px",
+        maxWidth: "400px",
+        width: "100%",
+        border: "1px solid #2a2a4a",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
+      }}>
         <div style={{ textAlign: "center", marginBottom: "30px" }}>
           <div style={{ fontSize: "40px", marginBottom: "10px" }}>🔐</div>
           <h1 style={{ fontSize: "28px", margin: "0", color: "#fbbf24" }}>
             Verify OTP
           </h1>
           <p style={{ color: "#94a3b8", fontSize: "14px", margin: "5px 0 0 0" }}>
-            OTP sent to {phone}
+            OTP sent to {email}
           </p>
         </div>
 
-        {/* Error Message */}
         {error && (
-          <div
-            style={{
-              background: "rgba(239, 68, 68, 0.2)",
-              border: "1px solid #ef4444",
-              color: "#ef4444",
-              padding: "10px",
-              borderRadius: "8px",
-              marginBottom: "20px",
-              fontSize: "14px",
-              textAlign: "center",
-            }}
-          >
+          <div style={{
+            background: "rgba(239,68,68,0.2)",
+            border: "1px solid #ef4444",
+            color: "#ef4444",
+            padding: "10px",
+            borderRadius: "8px",
+            marginBottom: "20px",
+            fontSize: "14px",
+            textAlign: "center",
+          }}>
             {error}
           </div>
         )}
 
         <form onSubmit={handleVerifyOTP}>
-          {/* OTP Input */}
           <div style={{ marginBottom: "20px" }}>
-            <label
-              style={{
-                display: "block",
-                color: "#94a3b8",
-                fontSize: "14px",
-                marginBottom: "5px",
-                fontWeight: "600",
-              }}
-            >
+            <label style={{ display: "block", color: "#94a3b8", fontSize: "14px", marginBottom: "5px", fontWeight: "600" }}>
               🔑 Enter OTP
             </label>
             <input
@@ -638,43 +539,20 @@ function SignUp() {
                 color: "white",
                 fontSize: "16px",
                 outline: "none",
-                transition: "all 0.3s",
-                boxSizing: "border-box",
                 textAlign: "center",
                 fontSize: "24px",
                 letterSpacing: "10px",
+                boxSizing: "border-box",
               }}
-              onFocus={(e) => {
-                e.target.style.borderColor = "#8b5cf6";
-                e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)";
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = "#2a2a4a";
-                e.target.style.boxShadow = "none";
-              }}
+              onFocus={(e) => { e.target.style.borderColor = "#8b5cf6"; e.target.style.boxShadow = "0 0 20px rgba(139, 92, 246, 0.2)"; }}
+              onBlur={(e) => { e.target.style.borderColor = "#2a2a4a"; e.target.style.boxShadow = "none"; }}
             />
-            <div
-              style={{
-                color: "#64748b",
-                fontSize: "12px",
-                marginTop: "5px",
-                textAlign: "center",
-              }}
-            >
-              Demo OTP: 123456
+            <div style={{ color: "#64748b", fontSize: "12px", marginTop: "5px", textAlign: "center" }}>
+              Check your email for the OTP
             </div>
           </div>
 
-          {/* Timer & Resend */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "20px",
-              fontSize: "14px",
-            }}
-          >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", fontSize: "14px" }}>
             <span style={{ color: "#94a3b8" }}>
               {timer > 0 ? (
                 <>⏱️ Resend in {timer}s</>
@@ -700,7 +578,6 @@ function SignUp() {
             </button>
           </div>
 
-          {/* Verify Button */}
           <button
             type="submit"
             disabled={otpLoading}
@@ -709,35 +586,23 @@ function SignUp() {
               padding: "14px",
               borderRadius: "50px",
               border: "none",
-              background: otpLoading
-                ? "#4a4a6a"
-                : "linear-gradient(135deg, #22c55e, #16a34a)",
+              background: otpLoading ? "#4a4a6a" : "linear-gradient(135deg, #22c55e, #16a34a)",
               color: "white",
               fontSize: "18px",
               fontWeight: "700",
               cursor: otpLoading ? "not-allowed" : "pointer",
-              transition: "all 0.3s",
-              boxShadow: otpLoading
-                ? "none"
-                : "0 8px 30px rgba(34, 197, 94, 0.4)",
+              boxShadow: otpLoading ? "none" : "0 8px 30px rgba(34, 197, 94, 0.4)",
             }}
             onMouseEnter={(e) => {
-              if (!otpLoading) {
-                e.target.style.transform = "scale(1.02)";
-                e.target.style.boxShadow = "0 12px 40px rgba(34, 197, 94, 0.6)";
-              }
+              if (!otpLoading) { e.target.style.transform = "scale(1.02)"; e.target.style.boxShadow = "0 12px 40px rgba(34, 197, 94, 0.6)"; }
             }}
             onMouseLeave={(e) => {
-              if (!otpLoading) {
-                e.target.style.transform = "scale(1)";
-                e.target.style.boxShadow = "0 8px 30px rgba(34, 197, 94, 0.4)";
-              }
+              if (!otpLoading) { e.target.style.transform = "scale(1)"; e.target.style.boxShadow = "0 8px 30px rgba(34, 197, 94, 0.4)"; }
             }}
           >
             {otpLoading ? "⏳ Verifying..." : "✅ Verify & Create Account"}
           </button>
 
-          {/* Back Button */}
           <button
             type="button"
             onClick={handleBackToForm}
@@ -752,18 +617,11 @@ function SignUp() {
               fontSize: "14px",
               fontWeight: "600",
               cursor: "pointer",
-              transition: "all 0.3s",
             }}
-            onMouseEnter={(e) => {
-              e.target.style.borderColor = "#8b5cf6";
-              e.target.style.color = "white";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.borderColor = "#475569";
-              e.target.style.color = "#94a3b8";
-            }}
+            onMouseEnter={(e) => { e.target.style.borderColor = "#8b5cf6"; e.target.style.color = "white"; }}
+            onMouseLeave={(e) => { e.target.style.borderColor = "#475569"; e.target.style.color = "#94a3b8"; }}
           >
-            ← Change Phone Number
+            ← Change Email
           </button>
         </form>
       </div>
