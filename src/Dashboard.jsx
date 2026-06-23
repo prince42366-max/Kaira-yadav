@@ -83,9 +83,9 @@ function Dashboard() {
     {
       id: 5,
       type: "🎬 Video",
-      title: "Exclusive Video 2",
+      title: "Playing with boobs",
       date: new Date().toLocaleDateString(),
-      file: "/video2.mp4",
+      file: "prevew 4.mp4",
       fileType: "video",
       likes: 0,
       liked: false,
