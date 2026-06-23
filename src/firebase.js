@@ -7,6 +7,7 @@ import { initializeApp } from "firebase/app";
 const firebaseConfig = {
   apiKey: "AIzaSyDgaDBhj0fll2E2EfN3re_To-EKQGzFyLs",
   authDomain: "fan-platform-chat.firebaseapp.com",
+  databaseURL: "https://fan-platform-chat-default-rtdb.firebaseio.com",
   projectId: "fan-platform-chat",
   storageBucket: "fan-platform-chat.firebasestorage.app",
   messagingSenderId: "853603372393",
