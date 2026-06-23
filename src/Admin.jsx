@@ -54,18 +54,6 @@ function Admin() {
     }
   };
 
-  // Save chat messages to localStorage
-  const saveChatMessages = (allMessages) => {
-    localStorage.setItem('chatMessages', JSON.stringify(allMessages));
-  };
-
-  // When user is selected, load messages
-  const selectUser = (user) => {
-    setSelectedUser(user);
-    // Refresh messages from storage
-    loadChatMessages();
-  };
-
   // ============================================================
   // LOGIN
   // ============================================================
@@ -202,27 +190,52 @@ function Admin() {
   };
 
   // ============================================================
-  // HANDLE SEND MESSAGE (Admin to Fan)
+  // HANDLE SEND MESSAGE (Admin to Fan) – also saves to localStorage
   // ============================================================
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedUser) return;
 
+    const phone = selectedUser.phone;
+    
     const msg = {
-      from: "Kaira", // Display name
+      from: "Kaira",
       text: newMessage,
       sender: 'admin',
-      time: new Date().toLocaleTimeString()
+      time: new Date().toLocaleTimeString(),
+      phone: phone,
+      timestamp: Date.now()
     };
 
-    // Update messages state
-    const phone = selectedUser.phone;
+    // Get existing messages
+    const saved = localStorage.getItem('chatMessages');
+    let allMessages = saved ? JSON.parse(saved) : {};
+    
+    if (!allMessages[phone]) {
+      allMessages[phone] = [];
+    }
+    allMessages[phone].push(msg);
+    
+    localStorage.setItem('chatMessages', JSON.stringify(allMessages));
+    
+    // Update state
     const currentMessages = messages[phone] || [];
-    const updated = [...currentMessages, msg];
-    const allMessages = { ...messages, [phone]: updated };
-    setMessages(allMessages);
-    saveChatMessages(allMessages);
+    setMessages({ ...messages, [phone]: [...currentMessages, msg] });
     setNewMessage("");
+  };
+
+  // ============================================================
+  // SELECT USER
+  // ============================================================
+  const selectUser = (user) => {
+    setSelectedUser(user);
+    // Load messages for that user from localStorage
+    const saved = localStorage.getItem('chatMessages');
+    if (saved) {
+      const all = JSON.parse(saved);
+      const userMessages = all[user.phone] || [];
+      setMessages({ ...messages, [user.phone]: userMessages });
+    }
   };
 
   // ============================================================
@@ -909,10 +922,11 @@ function Admin() {
       )}
 
       {/* ========================================================== */}
-      {/* CHAT TAB - NOW SHOWS REAL CHAT MESSAGES */}
+      {/* CHAT TAB - FIXED: Messages from Dashboard appear here */}
       {/* ========================================================== */}
       {activeTab === "chat" && (
         <div style={{ marginTop: "20px", display: "flex", gap: "20px", flexWrap: "wrap" }}>
+          {/* User List */}
           <div style={{
             flex: "1",
             minWidth: "200px",
@@ -924,36 +938,66 @@ function Admin() {
             overflowY: "auto",
           }}>
             <h4 style={{ color: "#fbbf24", margin: "0 0 15px 0" }}>👥 Fans</h4>
-            {users.map(user => (
-              <div
-                key={user.id}
-                onClick={() => selectUser(user)}
-                style={{
-                  padding: "10px",
-                  borderRadius: "8px",
-                  background: selectedUser?.id === user.id ? "#2a2a4a" : "transparent",
-                  cursor: "pointer",
-                  marginBottom: "5px",
-                }}
-                onMouseEnter={(e) => {
-                  if (selectedUser?.id !== user.id) {
-                    e.currentTarget.style.background = "#1a1a2e";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (selectedUser?.id !== user.id) {
-                    e.currentTarget.style.background = "transparent";
-                  }
-                }}
-              >
-                <div style={{ fontWeight: "600" }}>{user.name}</div>
-                <div style={{ color: "#64748b", fontSize: "12px" }}>
-                  {user.plan === "Premium" ? "⭐ Premium" : "📖 Free"}
+            {users.map(user => {
+              const phone = user.phone;
+              const saved = localStorage.getItem('chatMessages');
+              const allMessages = saved ? JSON.parse(saved) : {};
+              const userMessages = allMessages[phone] || [];
+              const hasUnread = userMessages.some(msg => msg.sender === 'fan' && !msg.read);
+              
+              return (
+                <div
+                  key={user.id}
+                  onClick={() => selectUser(user)}
+                  style={{
+                    padding: "10px",
+                    borderRadius: "8px",
+                    background: selectedUser?.id === user.id ? "#2a2a4a" : "transparent",
+                    cursor: "pointer",
+                    marginBottom: "5px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedUser?.id !== user.id) {
+                      e.currentTarget.style.background = "#1a1a2e";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedUser?.id !== user.id) {
+                      e.currentTarget.style.background = "transparent";
+                    }
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: "600" }}>{user.name}</div>
+                    <div style={{ color: "#64748b", fontSize: "12px" }}>
+                      {user.plan === "Premium" ? "⭐ Premium" : "📖 Free"}
+                    </div>
+                  </div>
+                  {hasUnread && (
+                    <div style={{
+                      background: "#ef4444",
+                      color: "white",
+                      borderRadius: "50%",
+                      width: "20px",
+                      height: "20px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "11px",
+                      fontWeight: "bold",
+                    }}>
+                      {userMessages.filter(m => m.sender === 'fan' && !m.read).length}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
+          {/* Chat Window */}
           <div style={{
             flex: "2",
             minWidth: "250px",
@@ -973,6 +1017,7 @@ function Admin() {
                   gap: "10px",
                   paddingBottom: "10px",
                   borderBottom: "1px solid #2a2a4a",
+                  marginBottom: "10px",
                 }}>
                   <div style={{
                     width: "35px",
@@ -1012,7 +1057,7 @@ function Admin() {
                         background: msg.sender === 'admin' ? "#8b5cf6" : "#2a2a4a",
                       }}>
                         <div style={{ fontSize: "10px", opacity: 0.7, marginBottom: "2px" }}>
-                          {msg.sender === 'admin' ? "You" : selectedUser.name}
+                          {msg.sender === 'admin' ? "You (Admin)" : selectedUser.name}
                         </div>
                         <div>{msg.text}</div>
                         <div style={{ fontSize: "10px", opacity: 0.5, marginTop: "3px" }}>

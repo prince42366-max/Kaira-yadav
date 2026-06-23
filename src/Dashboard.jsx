@@ -10,15 +10,9 @@ function Dashboard() {
     const saved = localStorage.getItem('chatMessages');
     if (saved) {
       const all = JSON.parse(saved);
-      return all[userPhone] || [
-        { from: "Kaira", text: "Welcome to your exclusive content! 🎉" },
-        { from: "Kaira", text: "Buy coupons to like, chat and send stickers! 💬" },
-      ];
+      return all[userPhone] || [];
     }
-    return [
-      { from: "Kaira", text: "Welcome to your exclusive content! 🎉" },
-      { from: "Kaira", text: "Buy coupons to like, chat and send stickers! 💬" },
-    ];
+    return [];
   });
 
   const [popupContent, setPopupContent] = useState(null);
@@ -83,9 +77,9 @@ function Dashboard() {
     {
       id: 5,
       type: "🎬 Video",
-      title: "Playing with boobs",
+      title: "Exclusive Video 2",
       date: new Date().toLocaleDateString(),
-      file: "prevew 4.mp4",
+      file: "/video2.mp4",
       fileType: "video",
       likes: 0,
       liked: false,
@@ -214,7 +208,6 @@ function Dashboard() {
 
   // ===== BUY COUPONS WITH REAL PAYMENT =====
   const buyCoupons = async (amount, price, couponCount) => {
-    // amount in rupees, price display, couponCount
     const isScriptLoaded = await loadRazorpayScript();
     if (!isScriptLoaded) {
       alert("❌ Payment gateway failed to load. Please try again.");
@@ -226,7 +219,7 @@ function Dashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: amount * 100, // paise
+          amount: amount * 100,
           currency: 'INR',
           receipt: `coupon_${Date.now()}`,
         }),
@@ -239,7 +232,7 @@ function Dashboard() {
       }
 
       const options = {
-        key: "rzp_live_T4fhMs1b6pXETJ", // 🔴 CHANGE TO YOUR LIVE KEY ID
+        key: "rzp_live_YOUR_LIVE_KEY_ID", // Replace with your Live Key ID
         amount: amount * 100,
         currency: "INR",
         name: "Kaira Yadav Fan Platform",
@@ -270,6 +263,7 @@ function Dashboard() {
     }
   };
 
+  // ===== HANDLE LIKE =====
   const handleLike = (contentId) => {
     if (coupons < 2) {
       alert(`❌ You need 2 coupons to like! You have ${coupons} coupons.`);
@@ -294,6 +288,7 @@ function Dashboard() {
     localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
   };
 
+  // ===== SEND MESSAGE (FIXED: saves to localStorage, no auto-reply) =====
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!message.trim()) return;
@@ -307,28 +302,39 @@ function Dashboard() {
     setCoupons(newCoupons);
     localStorage.setItem('userCoupons', JSON.stringify(newCoupons));
 
+    const userPhone = localStorage.getItem('userPhone') || 'unknown';
+    
+    // Create message object
     const newMsg = { 
       from: "You", 
       text: message,
       sender: 'fan',
-      time: new Date().toLocaleTimeString() 
+      time: new Date().toLocaleTimeString(),
+      phone: userPhone,
+      timestamp: Date.now()
     };
-    const updated = [...messages, newMsg];
-    updateMessages(updated);
+    
+    // Get existing messages from localStorage
+    const saved = localStorage.getItem('chatMessages');
+    let allMessages = saved ? JSON.parse(saved) : {};
+    
+    // Add message to this user's chat
+    if (!allMessages[userPhone]) {
+      allMessages[userPhone] = [];
+    }
+    allMessages[userPhone].push(newMsg);
+    
+    // Save back to localStorage
+    localStorage.setItem('chatMessages', JSON.stringify(allMessages));
+    
+    // Update local state
+    setMessages([...messages, newMsg]);
     setMessage("");
 
-    setTimeout(() => {
-      const reply = { 
-        from: "Kaira", 
-        text: `Thanks for your message! 💕 (5 coupons used)`,
-        sender: 'admin',
-        time: new Date().toLocaleTimeString()
-      };
-      const withReply = [...updated, reply];
-      updateMessages(withReply);
-    }, 1000);
+    // ===== AUTO-REPLY REMOVED! =====
   };
 
+  // ===== SEND STICKER TO CONTENT =====
   const sendStickerToContent = (contentId, sticker) => {
     if (coupons < 2) {
       alert(`❌ You need 2 coupons to send a sticker! You have ${coupons} coupons.`);
@@ -602,7 +608,7 @@ function Dashboard() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "15px" }}>
             <button
-              onClick={() => buyCoupons(15, 15, 10)} // amount, price, couponCount
+              onClick={() => buyCoupons(15, 15, 10)}
               style={{
                 padding: "15px",
                 borderRadius: "12px",
@@ -1279,7 +1285,7 @@ function Dashboard() {
       )}
 
       {/* ========================================================== */}
-      {/* CHAT SECTION */}
+      {/* CHAT SECTION (FIXED: no auto-reply, messages saved to localStorage) */}
       {/* ========================================================== */}
       {showChat && (
         <div style={{
@@ -1333,7 +1339,6 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* ===== MESSAGES ===== */}
           <div style={{
             height: "320px",
             overflowY: "auto",
@@ -1379,7 +1384,6 @@ function Dashboard() {
             ))}
           </div>
 
-          {/* ===== MESSAGE INPUT ===== */}
           <form onSubmit={handleSendMessage} style={{ display: "flex", gap: "10px" }}>
             <input
               type="text"
