@@ -66,7 +66,7 @@ function Dashboard() {
       type: "📸 Photo",
       title: "Exclusive Photo 3",
       date: new Date().toLocaleDateString(),
-      file: "p2.jpg",
+      file: "p2.jpeg",
       fileType: "image",
       likes: 0,
       liked: false,
