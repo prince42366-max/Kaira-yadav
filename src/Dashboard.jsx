@@ -92,6 +92,7 @@ function Dashboard() {
       stickers: []
     },
   ];
+  
 
   const [content, setContent] = useState(() => {
     const saved = localStorage.getItem('uploadedContent');
