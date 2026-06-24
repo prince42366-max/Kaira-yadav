@@ -677,7 +677,9 @@ function Dashboard() {
         </div>
       )}
 
-      {/* CHAT */}
+      {/* ========================================================== */}
+      {/* CHAT SECTION – FIXED COLORS AND ALIGNMENT */}
+      {/* ========================================================== */}
       {showChat && (
         <div style={{ marginTop: "20px", background: "#1a1a2e", borderRadius: "20px", padding: "20px", border: "1px solid rgba(139, 92, 246, 0.3)", boxShadow: "0 10px 40px rgba(0,0,0,0.3)", position: "relative", zIndex: 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "15px", borderBottom: "1px solid rgba(139, 92, 246, 0.2)", marginBottom: "15px" }}>
@@ -694,24 +696,87 @@ function Dashboard() {
             <div style={{ color: "#fbbf24", fontSize: "16px", fontWeight: "700", background: "rgba(251, 191, 36, 0.1)", padding: "6px 15px", borderRadius: "20px", border: "1px solid rgba(251, 191, 36, 0.2)" }}>🎫 {coupons}</div>
           </div>
 
+          {/* MESSAGES – WITH CORRECT ALIGNMENT & COLORS */}
           <div style={{ height: "320px", overflowY: "auto", padding: "15px", background: "#0a0a0f", borderRadius: "16px", marginBottom: "15px", border: "1px solid rgba(139, 92, 246, 0.1)" }}>
             {messages.map((msg, index) => (
-              <div key={index} style={{ textAlign: msg.from === "You" ? "right" : "left", marginBottom: "12px", animation: "fadeIn 0.3s ease" }}>
-                <div style={{ display: "inline-block", padding: "12px 18px", borderRadius: "18px", background: msg.from === "You" ? "linear-gradient(135deg, #8b5cf6, #7c3aed)" : "#fbbf24", maxWidth: "80%", border: msg.from !== "You" ? "1px solid rgba(139, 92, 246, 0.2)" : "none", boxShadow: msg.from === "You" ? "0 4px 15px rgba(139, 92, 246, 0.3)" : "none" }}>
-                  <div style={{ fontSize: "11px", color: msg.from === "You" ? "rgba(255,255,255,0.7)" : "#94a3b8", marginBottom: "4px", fontWeight: "600" }}>{msg.from}</div>
-                  <div style={{ fontSize: "14px", lineHeight: "1.5" }}>{msg.text}</div>
+              <div
+                key={index}
+                style={{
+                  textAlign: msg.from === "You" ? "right" : "left",
+                  marginBottom: "12px",
+                  animation: "fadeIn 0.3s ease",
+                }}
+              >
+                <div
+                  style={{
+                    display: "inline-block",
+                    padding: "12px 18px",
+                    borderRadius: "18px",
+                    background: msg.from === "You"
+                      ? "linear-gradient(135deg, #8b5cf6, #7c3aed)"  // Your messages (fan): PURPLE
+                      : "linear-gradient(135deg, #fbbf24, #d97706)", // Admin messages: GOLD
+                    maxWidth: "80%",
+                    border: msg.from !== "You" ? "1px solid #fbbf24" : "none",
+                    boxShadow: msg.from === "You"
+                      ? "0 4px 15px rgba(139, 92, 246, 0.3)"
+                      : "0 4px 15px rgba(251, 191, 36, 0.3)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      color: msg.from === "You" ? "rgba(255,255,255,0.7)" : "#000000",
+                      marginBottom: "4px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {msg.from}
+                  </div>
+                  <div style={{ fontSize: "14px", lineHeight: "1.5", color: msg.from === "You" ? "white" : "#000" }}>
+                    {msg.text}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
 
           <form onSubmit={handleSendMessage} style={{ display: "flex", gap: "10px" }}>
-            <input type="text" placeholder={isSpecialUser ? "Send message (Unlimited)" : `Send message (${coupons} coupons left)`} value={message} onChange={(e) => setMessage(e.target.value)} style={{ flex: 1, padding: "12px 18px", borderRadius: "25px", border: "1px solid rgba(139, 92, 246, 0.3)", background: "#0a0a0f", color: "white", fontSize: "14px", outline: "none", transition: "all 0.3s" }}
+            <input
+              type="text"
+              placeholder={isSpecialUser ? "Send message (Unlimited)" : `Send message (${coupons} coupons left)`}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              style={{
+                flex: 1,
+                padding: "12px 18px",
+                borderRadius: "25px",
+                border: "1px solid rgba(139, 92, 246, 0.3)",
+                background: "#0a0a0f",
+                color: "white",
+                fontSize: "14px",
+                outline: "none",
+                transition: "all 0.3s",
+              }}
               onFocus={(e) => { e.target.style.borderColor = "#8b5cf6"; e.target.style.boxShadow = "0 0 25px rgba(139, 92, 246, 0.2)"; }}
-              onBlur={(e) => { e.target.style.borderColor = "rgba(139, 92, 246, 0.3)"; e.target.style.boxShadow = "none"; }} />
-            <button type="submit" style={{ padding: "12px 25px", borderRadius: "25px", border: "none", background: (isSpecialUser || coupons >= 5) ? "linear-gradient(135deg, #8b5cf6, #ec4899)" : "#4a4a6a", color: "white", cursor: (isSpecialUser || coupons >= 5) ? "pointer" : "not-allowed", fontWeight: "700", fontSize: "14px", transition: "all 0.3s", boxShadow: (isSpecialUser || coupons >= 5) ? "0 4px 20px rgba(139, 92, 246, 0.3)" : "none" }}
+              onBlur={(e) => { e.target.style.borderColor = "rgba(139, 92, 246, 0.3)"; e.target.style.boxShadow = "none"; }}
+            />
+            <button
+              type="submit"
+              style={{
+                padding: "12px 25px",
+                borderRadius: "25px",
+                border: "none",
+                background: (isSpecialUser || coupons >= 5) ? "linear-gradient(135deg, #8b5cf6, #ec4899)" : "#4a4a6a",
+                color: "white",
+                cursor: (isSpecialUser || coupons >= 5) ? "pointer" : "not-allowed",
+                fontWeight: "700",
+                fontSize: "14px",
+                transition: "all 0.3s",
+                boxShadow: (isSpecialUser || coupons >= 5) ? "0 4px 20px rgba(139, 92, 246, 0.3)" : "none",
+              }}
               onMouseEnter={(e) => { if (isSpecialUser || coupons >= 5) { e.target.style.transform = "scale(1.05)"; e.target.style.boxShadow = "0 8px 30px rgba(139, 92, 246, 0.5)"; } }}
-              onMouseLeave={(e) => { if (isSpecialUser || coupons >= 5) { e.target.style.transform = "scale(1)"; e.target.style.boxShadow = "0 4px 20px rgba(139, 92, 246, 0.3)"; } }}>
+              onMouseLeave={(e) => { if (isSpecialUser || coupons >= 5) { e.target.style.transform = "scale(1)"; e.target.style.boxShadow = "0 4px 20px rgba(139, 92, 246, 0.3)"; } }}
+            >
               {isSpecialUser ? "Send 💬 (Free)" : (coupons >= 5 ? "Send 💬" : "🔒 Need 5")}
             </button>
           </form>
