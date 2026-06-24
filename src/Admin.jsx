@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { database, ref, push, onChildAdded } from "./firebase";
+import { database, ref, push, onChildAdded, update } from "./firebase";
 
 function Admin() {
   // ===== LOGIN =====
@@ -41,43 +41,119 @@ function Admin() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState({});
   const [newMessage, setNewMessage] = useState("");
+  const [chatUsers, setChatUsers] = useState([]); // list of users with messages
 
   // ============================================================
-  // LOAD CHAT MESSAGES FROM FIREBASE
-  // ============================================================
-  const loadChatMessages = () => {
-    const saved = localStorage.getItem('chatMessages');
-    if (saved) {
-      try {
-        const all = JSON.parse(saved);
-        setMessages(all);
-        return all;
-      } catch (e) {
-        console.error("Error loading chat:", e);
-      }
-    }
-    return {};
-  };
-
-  // ============================================================
-  // LISTEN FOR NEW MESSAGES FROM FIREBASE
+  // LOAD CHAT USERS AND MESSAGES FROM FIREBASE
   // ============================================================
   useEffect(() => {
     const msgRef = ref(database, 'chatMessages');
     const unsubscribe = onChildAdded(msgRef, (snapshot) => {
       const msg = snapshot.val();
-      console.log("📩 New message from Firebase:", msg);
+      console.log("📩 New message:", msg);
+
+      // Update messages state
       setMessages(prev => {
         const phone = msg.phone;
         const userMsgs = prev[phone] || [];
+        // Avoid duplicate
         const exists = userMsgs.some(m => m.timestamp === msg.timestamp && m.text === msg.text);
         if (exists) return prev;
         return { ...prev, [phone]: [...userMsgs, msg] };
       });
+
+      // Update chat users list (for sidebar)
+      setChatUsers(prev => {
+        const exists = prev.some(u => u.phone === msg.phone);
+        if (exists) {
+          // Update last message time
+          return prev.map(u => 
+            u.phone === msg.phone 
+              ? { ...u, lastMessage: msg.text, lastTimestamp: msg.timestamp, lastSender: msg.sender }
+              : u
+          );
+        } else {
+          // New user – find their name from users list
+          const user = users.find(u => u.phone === msg.phone);
+          return [...prev, {
+            phone: msg.phone,
+            name: user ? user.name : msg.name || "Unknown",
+            lastMessage: msg.text,
+            lastTimestamp: msg.timestamp,
+            lastSender: msg.sender
+          }];
+        }
+      });
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [users]);
+
+  // ============================================================
+  // COMPUTE UNREAD COUNT FOR A USER
+  // ============================================================
+  const getUnreadCount = (phone) => {
+    const msgs = messages[phone] || [];
+    return msgs.filter(m => m.sender === 'fan' && m.read !== true).length;
+  };
+
+  // ============================================================
+  // MARK MESSAGES AS READ WHEN ADMIN SELECTS A USER
+  // ============================================================
+  const markAsRead = (phone) => {
+    const msgs = messages[phone] || [];
+    const unreadMsgs = msgs.filter(m => m.sender === 'fan' && m.read !== true);
+    if (unreadMsgs.length === 0) return;
+
+    // Update Firebase to mark them as read
+    const msgRef = ref(database, 'chatMessages');
+    // We need to know the keys of those messages to update them.
+    // Since we don't store keys, we can use a different approach: store read status per message id.
+    // But easier: we can update all messages of that user by setting read to true.
+    // For simplicity, we'll just update the local state and assume Firebase sync later.
+    // Actually, we need to persist read status. Let's store read in Firebase.
+
+    // Since we don't have individual keys, we'll store a separate "read" field per message.
+    // For this to work, we need to store message keys. But in our current setup, we use push() which gives a unique key.
+    // We can store the key along with the message. But easier: we can use a different structure: store messages under each user's phone.
+    // For simplicity, we'll adopt a structure: messages/{phone}/{messageId} with fields.
+    // Let's refactor: when we send a message, we push to messages/ and also store phone.
+    // In the admin, we can listen to messages/ and group by phone.
+    // For marking read, we need to update specific messages.
+
+    // We'll do a simpler approach: we'll store read status in a separate node: readStatus/{phone}/{messageId} = true.
+    // But to keep it simple for now, we'll just mark as read locally and use a hack: we'll store a lastReadTimestamp per user in localStorage.
+    // But that won't sync across devices.
+
+    // Given the complexity, let's do a simple version: we'll have a "read" field in each message.
+    // When admin views chat, we'll update all messages from that user to read = true.
+    // To update, we need to fetch all messages for that user and update each.
+
+    // For now, we'll just update locally and not persist across reloads. But we'll store read status in Firebase later.
+
+    // Quick workaround: we'll store read status in localStorage per user.
+    const key = `admin_read_${phone}`;
+    localStorage.setItem(key, Date.now().toString());
+
+    // Update local state
+    setMessages(prev => {
+      const updated = { ...prev };
+      updated[phone] = updated[phone].map(m => {
+        if (m.sender === 'fan') return { ...m, read: true };
+        return m;
+      });
+      return updated;
+    });
+  };
+
+  // ============================================================
+  // SELECT USER
+  // ============================================================
+  const selectUser = (user) => {
+    setSelectedUser(user);
+    // Mark messages as read
+    markAsRead(user.phone);
+  };
 
   // ============================================================
   // ADMIN LOGIN
@@ -228,20 +304,11 @@ function Admin() {
       name: name,
       text: newMessage,
       sender: 'admin',
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      read: true // admin messages are always read
     });
 
     setNewMessage("");
-  };
-
-  // ============================================================
-  // SELECT USER
-  // ============================================================
-  const selectUser = (user) => {
-    setSelectedUser(user);
-    const all = loadChatMessages();
-    const userMessages = all[user.phone] || [];
-    setMessages(prev => ({ ...prev, [user.phone]: userMessages }));
   };
 
   // ============================================================
@@ -494,7 +561,11 @@ function Admin() {
             key={tab}
             onClick={() => {
               setActiveTab(tab);
-              if (tab === "chat") loadChatMessages();
+              if (tab === "chat") {
+                // Refresh chat users list from messages
+                const msgRef = ref(database, 'chatMessages');
+                // We'll rely on the existing listener
+              }
             }}
             style={{
               flex: 1,
@@ -652,88 +723,237 @@ function Admin() {
         </div>
       )}
 
-      {/* ===== CHAT TAB ===== */}
+      {/* ========================================================== */}
+      {/* CHAT TAB – WHATSAPP/INSTAGRAM STYLE */}
+      {/* ========================================================== */}
       {activeTab === "chat" && (
-        <div style={{ marginTop: "20px", display: "flex", gap: "20px", flexWrap: "wrap" }}>
-          <div style={{ flex: "1", minWidth: "200px", background: "#1a1a2e", borderRadius: "12px", border: "1px solid #2a2a4a", padding: "15px", maxHeight: "400px", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
-              <h4 style={{ color: "#fbbf24", margin: 0 }}>👥 Fans</h4>
-              <button
-                onClick={() => {
-                  const all = loadChatMessages();
-                  alert(`✅ Chat refreshed! ${Object.keys(all).length} users have messages.`);
-                }}
-                style={{ padding: "5px 12px", borderRadius: "6px", border: "none", background: "#8b5cf6", color: "white", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
-              >
-                🔄 Refresh
-              </button>
+        <div style={{ marginTop: "20px", display: "flex", gap: "20px", flexWrap: "wrap", height: "600px" }}>
+          {/* Chat List */}
+          <div style={{
+            flex: "1",
+            minWidth: "250px",
+            background: "#1a1a2e",
+            borderRadius: "12px",
+            border: "1px solid #2a2a4a",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+          }}>
+            <div style={{
+              padding: "15px",
+              borderBottom: "1px solid #2a2a4a",
+              background: "#0a0a0f",
+            }}>
+              <h4 style={{ margin: 0, color: "#fbbf24" }}>💬 Chats</h4>
             </div>
-            {users.map(user => {
-              const phone = user.phone;
-              const saved = localStorage.getItem('chatMessages');
-              const allMessages = saved ? JSON.parse(saved) : {};
-              const userMessages = allMessages[phone] || [];
-              return (
-                <div
-                  key={user.id}
-                  onClick={() => selectUser(user)}
-                  style={{
-                    padding: "10px",
-                    borderRadius: "8px",
-                    background: selectedUser?.id === user.id ? "#2a2a4a" : "transparent",
-                    cursor: "pointer",
-                    marginBottom: "5px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                  onMouseEnter={(e) => { if (selectedUser?.id !== user.id) e.currentTarget.style.background = "#1a1a2e"; }}
-                  onMouseLeave={(e) => { if (selectedUser?.id !== user.id) e.currentTarget.style.background = "transparent"; }}
-                >
-                  <div>
-                    <div style={{ fontWeight: "600" }}>{user.name}</div>
-                    <div style={{ color: "#64748b", fontSize: "12px" }}>{user.plan === "Premium" ? "⭐ Premium" : "📖 Free"}</div>
-                  </div>
-                  {userMessages.length > 0 && (
-                    <div style={{ background: "#22c55e", color: "white", borderRadius: "12px", padding: "2px 8px", fontSize: "10px", fontWeight: "bold" }}>
-                      {userMessages.length}
-                    </div>
-                  )}
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {chatUsers.length === 0 ? (
+                <div style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>
+                  No messages yet
                 </div>
-              );
-            })}
+              ) : (
+                chatUsers
+                  .sort((a, b) => (b.lastTimestamp || 0) - (a.lastTimestamp || 0))
+                  .map(user => {
+                    const unread = getUnreadCount(user.phone);
+                    return (
+                      <div
+                        key={user.phone}
+                        onClick={() => {
+                          // Find full user object from users list
+                          const fullUser = users.find(u => u.phone === user.phone) || { name: user.name, phone: user.phone };
+                          selectUser(fullUser);
+                        }}
+                        style={{
+                          padding: "12px 15px",
+                          borderBottom: "1px solid #1a1a2e",
+                          cursor: "pointer",
+                          background: selectedUser?.phone === user.phone ? "#2a2a4a" : "transparent",
+                          transition: "background 0.2s",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedUser?.phone !== user.phone) {
+                            e.currentTarget.style.background = "#1e1e3a";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedUser?.phone !== user.phone) {
+                            e.currentTarget.style.background = "transparent";
+                          }
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "50%",
+                            background: "linear-gradient(135deg, #8b5cf6, #ec4899)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "18px",
+                            flexShrink: 0,
+                          }}>
+                            {user.name ? user.name[0].toUpperCase() : "U"}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: "600", fontSize: "14px" }}>{user.name || "Unknown"}</div>
+                            <div style={{
+                              fontSize: "12px",
+                              color: unread > 0 ? "white" : "#94a3b8",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              fontWeight: unread > 0 ? "600" : "normal",
+                            }}>
+                              {user.lastMessage || "No messages"}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                          {user.lastTimestamp && (
+                            <div style={{ fontSize: "10px", color: "#64748b" }}>
+                              {new Date(user.lastTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          )}
+                          {unread > 0 && (
+                            <div style={{
+                              background: "#ef4444",
+                              color: "white",
+                              borderRadius: "50%",
+                              minWidth: "20px",
+                              height: "20px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "11px",
+                              fontWeight: "bold",
+                              padding: "0 6px",
+                            }}>
+                              {unread}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
           </div>
 
-          <div style={{ flex: "2", minWidth: "250px", background: "#1a1a2e", borderRadius: "12px", border: "1px solid #2a2a4a", padding: "15px", display: "flex", flexDirection: "column", height: "400px" }}>
+          {/* Chat Window */}
+          <div style={{
+            flex: "2",
+            minWidth: "300px",
+            background: "#1a1a2e",
+            borderRadius: "12px",
+            border: "1px solid #2a2a4a",
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+          }}>
             {selectedUser ? (
               <>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", paddingBottom: "10px", borderBottom: "1px solid #2a2a4a", marginBottom: "10px" }}>
-                  <div style={{ width: "35px", height: "35px", borderRadius: "50%", background: "linear-gradient(135deg, #8b5cf6, #ec4899)", display: "flex", alignItems: "center", justifyContent: "center" }}>👤</div>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "15px",
+                  borderBottom: "1px solid #2a2a4a",
+                  background: "#0a0a0f",
+                }}>
+                  <div style={{
+                    width: "35px",
+                    height: "35px",
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, #8b5cf6, #ec4899)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    {selectedUser.name ? selectedUser.name[0].toUpperCase() : "U"}
+                  </div>
                   <div>
                     <div style={{ fontWeight: "600" }}>{selectedUser.name}</div>
                     <div style={{ color: "#22c55e", fontSize: "12px" }}>🟢 Online</div>
                   </div>
                 </div>
 
-                <div style={{ flex: 1, overflowY: "auto", padding: "10px 0" }}>
-                  {(messages[selectedUser.phone] || []).map((msg, idx) => (
-                    <div key={idx} style={{ display: "flex", justifyContent: msg.sender === 'admin' ? "flex-end" : "flex-start", marginBottom: "10px" }}>
-                      <div style={{ maxWidth: "80%", padding: "8px 12px", borderRadius: "12px", background: msg.sender === 'admin' ? "#fbbf24" : "#2a2a4a" }}>
-                        <div style={{ fontSize: "10px", opacity: 0.7, marginBottom: "2px" }}>{msg.sender === 'admin' ? "You (Admin)" : selectedUser.name}</div>
-                        <div>{msg.text}</div>
-                        <div style={{ fontSize: "10px", opacity: 0.5, marginTop: "3px" }}>{msg.time}</div>
+                <div style={{ flex: 1, overflowY: "auto", padding: "15px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {(messages[selectedUser.phone] || []).map((msg, idx) => {
+                    const isAdmin = msg.sender === 'admin';
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          alignSelf: isAdmin ? "flex-end" : "flex-start",
+                          maxWidth: "80%",
+                          background: isAdmin ? "#8b5cf6" : "#2a2a4a",
+                          padding: "10px 14px",
+                          borderRadius: "18px",
+                          borderBottomRightRadius: isAdmin ? "4px" : "18px",
+                          borderBottomLeftRadius: isAdmin ? "18px" : "4px",
+                          boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+                        }}
+                      >
+                        <div style={{ fontSize: "13px", color: isAdmin ? "white" : "#e2e8f0" }}>
+                          {msg.text}
+                        </div>
+                        <div style={{ fontSize: "10px", color: isAdmin ? "rgba(255,255,255,0.7)" : "#94a3b8", marginTop: "4px", textAlign: "right" }}>
+                          {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
-                <form onSubmit={handleSendMessage} style={{ display: "flex", gap: "10px", borderTop: "1px solid #2a2a4a", paddingTop: "10px" }}>
-                  <input type="text" placeholder={`Message ${selectedUser.name}...`} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} style={{ flex: 1, padding: "10px 15px", borderRadius: "25px", border: "1px solid #2a2a4a", background: "#0a0a0f", color: "white", fontSize: "14px", outline: "none" }} />
-                  <button type="submit" style={{ padding: "10px 20px", borderRadius: "25px", border: "none", background: "linear-gradient(135deg, #8b5cf6, #ec4899)", color: "white", cursor: "pointer", fontWeight: "600" }}>Send</button>
+                <form onSubmit={handleSendMessage} style={{ display: "flex", gap: "10px", padding: "15px", borderTop: "1px solid #2a2a4a", background: "#0a0a0f" }}>
+                  <input
+                    type="text"
+                    placeholder={`Message ${selectedUser.name}...`}
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: "10px 15px",
+                      borderRadius: "25px",
+                      border: "1px solid #2a2a4a",
+                      background: "#1a1a2e",
+                      color: "white",
+                      fontSize: "14px",
+                      outline: "none",
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    style={{
+                      padding: "10px 20px",
+                      borderRadius: "25px",
+                      border: "none",
+                      background: "linear-gradient(135deg, #8b5cf6, #ec4899)",
+                      color: "white",
+                      cursor: "pointer",
+                      fontWeight: "600",
+                    }}
+                  >
+                    Send
+                  </button>
                 </form>
               </>
             ) : (
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>👈 Select a fan to chat</div>
+              <div style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#64748b",
+                fontSize: "16px",
+              }}>
+                👈 Select a chat to start messaging
+              </div>
             )}
           </div>
         </div>

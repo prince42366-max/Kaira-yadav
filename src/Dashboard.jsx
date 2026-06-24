@@ -286,7 +286,7 @@ function Dashboard() {
     localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
   };
 
-  // ===== SEND MESSAGE (FIXED: added 'from' field) =====
+  // ===== SEND MESSAGE (FIREBASE) WITH read: false =====
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!message.trim()) return;
@@ -305,15 +305,16 @@ function Dashboard() {
     const userPhone = localStorage.getItem('userPhone') || 'unknown';
     const userName = localStorage.getItem('userName') || 'Fan';
 
-    // ✅ SEND TO FIREBASE WITH 'from'
+    // ✅ Send to Firebase with 'read: false' so admin sees unread badge
     const msgRef = ref(database, 'chatMessages');
     push(msgRef, {
       phone: userPhone,
       name: userName,
       text: message,
-      from: "You",          // ← THIS WAS MISSING
+      from: "You",
       sender: 'fan',
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      read: false   // ← IMPORTANT: Marks as unread for admin
     });
 
     setMessage("");
@@ -677,7 +678,7 @@ function Dashboard() {
         </div>
       )}
 
-      {/* CHAT SECTION – FIXED COLORS AND ALIGNMENT */}
+      {/* CHAT SECTION */}
       {showChat && (
         <div style={{ marginTop: "20px", background: "#1a1a2e", borderRadius: "20px", padding: "20px", border: "1px solid rgba(139, 92, 246, 0.3)", boxShadow: "0 10px 40px rgba(0,0,0,0.3)", position: "relative", zIndex: 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "15px", borderBottom: "1px solid rgba(139, 92, 246, 0.2)", marginBottom: "15px" }}>
@@ -694,10 +695,8 @@ function Dashboard() {
             <div style={{ color: "#fbbf24", fontSize: "16px", fontWeight: "700", background: "rgba(251, 191, 36, 0.1)", padding: "6px 15px", borderRadius: "20px", border: "1px solid rgba(251, 191, 36, 0.2)" }}>🎫 {coupons}</div>
           </div>
 
-          {/* MESSAGES */}
           <div style={{ height: "320px", overflowY: "auto", padding: "15px", background: "#0a0a0f", borderRadius: "16px", marginBottom: "15px", border: "1px solid rgba(139, 92, 246, 0.1)" }}>
             {messages.map((msg, index) => {
-              // Determine if this is the user's own message
               const isOwnMessage = msg.from === "You" || msg.sender === 'fan';
               return (
                 <div
@@ -714,8 +713,8 @@ function Dashboard() {
                       padding: "12px 18px",
                       borderRadius: "18px",
                       background: isOwnMessage
-                        ? "linear-gradient(135deg, #8b5cf6, #7c3aed)"  // YOUR MESSAGES: PURPLE
-                        : "linear-gradient(135deg, #fbbf24, #d97706)", // ADMIN: GOLD
+                        ? "linear-gradient(135deg, #8b5cf6, #7c3aed)"
+                        : "linear-gradient(135deg, #fbbf24, #d97706)",
                       maxWidth: "80%",
                       border: isOwnMessage ? "none" : "1px solid #fbbf24",
                       boxShadow: isOwnMessage
@@ -731,7 +730,7 @@ function Dashboard() {
                         fontWeight: "600",
                       }}
                     >
-                      {isOwnMessage ? "You" : msg.from || "Kaira"}
+                      {isOwnMessage ? "You" : "Kaira"}
                     </div>
                     <div style={{ fontSize: "14px", lineHeight: "1.5", color: isOwnMessage ? "white" : "#000" }}>
                       {msg.text}
