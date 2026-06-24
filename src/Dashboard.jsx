@@ -104,7 +104,7 @@ function Dashboard() {
       type: "📸 Photo",
       title: "Exclusive Photo 4",
       date: new Date().toLocaleDateString(),
-      file: "photo4.jpg",       // change file name as needed
+      file: "p3.png",       // change file name as needed
       fileType: "image",
       likes: 0,
       liked: false,
