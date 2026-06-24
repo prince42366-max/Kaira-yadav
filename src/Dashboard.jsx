@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
-import { database, ref, push, onChildAdded } from "./firebase";
+import { database, ref, push, onChildAdded, auth, signInAnonymously } from "./firebase";
 
 function Dashboard() {
+  // ===== ANONYMOUS AUTH =====
+  useEffect(() => {
+    signInAnonymously(auth).catch(err => console.error("Dashboard auth error:", err));
+  }, []);
+
   const [showChat, setShowChat] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -29,8 +34,9 @@ function Dashboard() {
   // ===== CHECK IF SPECIAL USER =====
   const isSpecialUser = localStorage.getItem('isSpecialUser') === 'true';
 
-  // ===== HARDCODED CONTENT =====
+  // ===== HARDCODED CONTENT (with 5 extra photos & 5 extra videos) =====
   const hardcodedContent = [
+    // Existing photos
     {
       id: 1,
       type: "📸 Photo",
@@ -60,13 +66,14 @@ function Dashboard() {
       type: "📸 Photo",
       title: "Exclusive Photo 3",
       date: new Date().toLocaleDateString(),
-      file: "p2.jpeg",
+      file: "p2.jpg",
       fileType: "image",
       likes: 0,
       liked: false,
       views: 0,
       stickers: []
     },
+    // Existing videos
     {
       id: 4,
       type: "🎬 Video",
@@ -91,8 +98,129 @@ function Dashboard() {
       views: 0,
       stickers: []
     },
+    // ===== 5 EXTRA PHOTOS (IDs 6-10) =====
+    {
+      id: 6,
+      type: "📸 Photo",
+      title: "Exclusive Photo 4",
+      date: new Date().toLocaleDateString(),
+      file: "photo4.jpg",       // change file name as needed
+      fileType: "image",
+      likes: 0,
+      liked: false,
+      views: 0,
+      stickers: []
+    },
+    {
+      id: 7,
+      type: "📸 Photo",
+      title: "Exclusive Photo 5",
+      date: new Date().toLocaleDateString(),
+      file: "photo5.jpg",
+      fileType: "image",
+      likes: 0,
+      liked: false,
+      views: 0,
+      stickers: []
+    },
+    {
+      id: 8,
+      type: "📸 Photo",
+      title: "Exclusive Photo 6",
+      date: new Date().toLocaleDateString(),
+      file: "photo6.jpg",
+      fileType: "image",
+      likes: 0,
+      liked: false,
+      views: 0,
+      stickers: []
+    },
+    {
+      id: 9,
+      type: "📸 Photo",
+      title: "Exclusive Photo 7",
+      date: new Date().toLocaleDateString(),
+      file: "photo7.jpg",
+      fileType: "image",
+      likes: 0,
+      liked: false,
+      views: 0,
+      stickers: []
+    },
+    {
+      id: 10,
+      type: "📸 Photo",
+      title: "Exclusive Photo 8",
+      date: new Date().toLocaleDateString(),
+      file: "photo8.jpg",
+      fileType: "image",
+      likes: 0,
+      liked: false,
+      views: 0,
+      stickers: []
+    },
+    // ===== 5 EXTRA VIDEOS (IDs 11-15) =====
+    {
+      id: 11,
+      type: "🎬 Video",
+      title: "Exclusive Video 3",
+      date: new Date().toLocaleDateString(),
+      file: "video3.mp4",
+      fileType: "video",
+      likes: 0,
+      liked: false,
+      views: 0,
+      stickers: []
+    },
+    {
+      id: 12,
+      type: "🎬 Video",
+      title: "Exclusive Video 4",
+      date: new Date().toLocaleDateString(),
+      file: "video4.mp4",
+      fileType: "video",
+      likes: 0,
+      liked: false,
+      views: 0,
+      stickers: []
+    },
+    {
+      id: 13,
+      type: "🎬 Video",
+      title: "Exclusive Video 5",
+      date: new Date().toLocaleDateString(),
+      file: "video5.mp4",
+      fileType: "video",
+      likes: 0,
+      liked: false,
+      views: 0,
+      stickers: []
+    },
+    {
+      id: 14,
+      type: "🎬 Video",
+      title: "Exclusive Video 6",
+      date: new Date().toLocaleDateString(),
+      file: "video6.mp4",
+      fileType: "video",
+      likes: 0,
+      liked: false,
+      views: 0,
+      stickers: []
+    },
+    {
+      id: 15,
+      type: "🎬 Video",
+      title: "Exclusive Video 7",
+      date: new Date().toLocaleDateString(),
+      file: "video7.mp4",
+      fileType: "video",
+      likes: 0,
+      liked: false,
+      views: 0,
+      stickers: []
+    },
   ];
-  
 
   const [content, setContent] = useState(() => {
     const saved = localStorage.getItem('uploadedContent');
@@ -101,7 +229,7 @@ function Dashboard() {
   });
 
   useEffect(() => {
-    const adminItems = content.filter(item => item.id > 5);
+    const adminItems = content.filter(item => item.id > 15); // adjust if needed
     localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
   }, [content]);
 
@@ -263,7 +391,7 @@ function Dashboard() {
           : c
       );
       setContent(updatedContent);
-      const adminItems = updatedContent.filter(item => item.id > 5);
+      const adminItems = updatedContent.filter(item => item.id > 15);
       localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
       return;
     }
@@ -283,7 +411,7 @@ function Dashboard() {
         : c
     );
     setContent(updatedContent);
-    const adminItems = updatedContent.filter(item => item.id > 5);
+    const adminItems = updatedContent.filter(item => item.id > 15);
     localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
   };
 
@@ -330,7 +458,7 @@ function Dashboard() {
           : c
       );
       setContent(updatedContent);
-      const adminItems = updatedContent.filter(item => item.id > 5);
+      const adminItems = updatedContent.filter(item => item.id > 15);
       localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
       alert(`🎨 Sticker sent! (Free)`);
       return;
@@ -351,7 +479,7 @@ function Dashboard() {
         : c
     );
     setContent(updatedContent);
-    const adminItems = updatedContent.filter(item => item.id > 5);
+    const adminItems = updatedContent.filter(item => item.id > 15);
     localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
     alert(`🎨 Sticker sent! (2 coupons used)`);
   };
@@ -387,7 +515,7 @@ function Dashboard() {
         : c
     );
     setContent(updatedContent);
-    const adminItems = updatedContent.filter(item => item.id > 5);
+    const adminItems = updatedContent.filter(item => item.id > 15);
     localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
   };
 
