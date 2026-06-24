@@ -718,7 +718,7 @@ function Admin() {
                 <div style={{ flex: 1, overflowY: "auto", padding: "10px 0" }}>
                   {(messages[selectedUser.phone] || []).map((msg, idx) => (
                     <div key={idx} style={{ display: "flex", justifyContent: msg.sender === 'admin' ? "flex-end" : "flex-start", marginBottom: "10px" }}>
-                      <div style={{ maxWidth: "80%", padding: "8px 12px", borderRadius: "12px", background: msg.sender === 'admin' ? "#8b5cf6" : "#2a2a4a" }}>
+                      <div style={{ maxWidth: "80%", padding: "8px 12px", borderRadius: "12px", background: msg.sender === 'admin' ? "#fbbf24" : "#2a2a4a" }}>
                         <div style={{ fontSize: "10px", opacity: 0.7, marginBottom: "2px" }}>{msg.sender === 'admin' ? "You (Admin)" : selectedUser.name}</div>
                         <div>{msg.text}</div>
                         <div style={{ fontSize: "10px", opacity: 0.5, marginTop: "3px" }}>{msg.time}</div>

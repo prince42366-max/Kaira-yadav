@@ -697,7 +697,7 @@ function Dashboard() {
           <div style={{ height: "320px", overflowY: "auto", padding: "15px", background: "#0a0a0f", borderRadius: "16px", marginBottom: "15px", border: "1px solid rgba(139, 92, 246, 0.1)" }}>
             {messages.map((msg, index) => (
               <div key={index} style={{ textAlign: msg.from === "You" ? "right" : "left", marginBottom: "12px", animation: "fadeIn 0.3s ease" }}>
-                <div style={{ display: "inline-block", padding: "12px 18px", borderRadius: "18px", background: msg.from === "You" ? "linear-gradient(135deg, #8b5cf6, #7c3aed)" : "#1a1a2e", maxWidth: "80%", border: msg.from !== "You" ? "1px solid rgba(139, 92, 246, 0.2)" : "none", boxShadow: msg.from === "You" ? "0 4px 15px rgba(139, 92, 246, 0.3)" : "none" }}>
+                <div style={{ display: "inline-block", padding: "12px 18px", borderRadius: "18px", background: msg.from === "You" ? "linear-gradient(135deg, #8b5cf6, #7c3aed)" : "#fbbf24", maxWidth: "80%", border: msg.from !== "You" ? "1px solid rgba(139, 92, 246, 0.2)" : "none", boxShadow: msg.from === "You" ? "0 4px 15px rgba(139, 92, 246, 0.3)" : "none" }}>
                   <div style={{ fontSize: "11px", color: msg.from === "You" ? "rgba(255,255,255,0.7)" : "#94a3b8", marginBottom: "4px", fontWeight: "600" }}>{msg.from}</div>
                   <div style={{ fontSize: "14px", lineHeight: "1.5" }}>{msg.text}</div>
                 </div>
