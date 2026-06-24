@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { database, ref, push, onChildAdded, update } from "./firebase";
+import { database, ref, push, onChildAdded} from "./firebase";
 
 function Admin() {
   // ===== LOGIN =====
