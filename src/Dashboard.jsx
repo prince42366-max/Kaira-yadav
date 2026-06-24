@@ -222,7 +222,7 @@ function Dashboard() {
       }
 
       const options = {
-        key: "rzp_live_YOUR_LIVE_KEY_ID",
+        key: "rzp_live_T4fhMs1b6pXETJ",
         amount: amount * 100,
         currency: "INR",
         name: "Kaira Yadav Fan Platform",
