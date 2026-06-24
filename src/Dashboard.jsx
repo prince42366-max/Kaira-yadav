@@ -165,7 +165,7 @@ function Dashboard() {
       type: "🎬 Video",
       title: "Exclusive Video 3",
       date: new Date().toLocaleDateString(),
-      file: "dashbord v.mp4.mp4",
+      file: "dashbord v.mp4",
       fileType: "video",
       likes: 0,
       liked: false,
