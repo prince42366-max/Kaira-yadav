@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
+import { auth, signInAnonymously } from "./firebase";
 
 function App() {
+  // ===== ANONYMOUS AUTH =====
+  useEffect(() => {
+    signInAnonymously(auth).catch(err => console.error("Fan auth error:", err));
+  }, []);
+
   // Timer state
   const [time, setTime] = useState({
     hours: 1,

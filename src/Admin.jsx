@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
-import { database, ref, push, onChildAdded} from "./firebase";
+import { database, ref, push, onChildAdded, auth, signInAnonymously } from "./firebase";
 
 function Admin() {
+  // ===== ANONYMOUS AUTH =====
+  useEffect(() => {
+    signInAnonymously(auth).catch(err => console.error("Admin auth error:", err));
+  }, []);
+
   // ===== LOGIN =====
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
@@ -104,32 +109,6 @@ function Admin() {
     const msgs = messages[phone] || [];
     const unreadMsgs = msgs.filter(m => m.sender === 'fan' && m.read !== true);
     if (unreadMsgs.length === 0) return;
-
-    // Update Firebase to mark them as read
-    const msgRef = ref(database, 'chatMessages');
-    // We need to know the keys of those messages to update them.
-    // Since we don't store keys, we can use a different approach: store read status per message id.
-    // But easier: we can update all messages of that user by setting read to true.
-    // For simplicity, we'll just update the local state and assume Firebase sync later.
-    // Actually, we need to persist read status. Let's store read in Firebase.
-
-    // Since we don't have individual keys, we'll store a separate "read" field per message.
-    // For this to work, we need to store message keys. But in our current setup, we use push() which gives a unique key.
-    // We can store the key along with the message. But easier: we can use a different structure: store messages under each user's phone.
-    // For simplicity, we'll adopt a structure: messages/{phone}/{messageId} with fields.
-    // Let's refactor: when we send a message, we push to messages/ and also store phone.
-    // In the admin, we can listen to messages/ and group by phone.
-    // For marking read, we need to update specific messages.
-
-    // We'll do a simpler approach: we'll store read status in a separate node: readStatus/{phone}/{messageId} = true.
-    // But to keep it simple for now, we'll just mark as read locally and use a hack: we'll store a lastReadTimestamp per user in localStorage.
-    // But that won't sync across devices.
-
-    // Given the complexity, let's do a simple version: we'll have a "read" field in each message.
-    // When admin views chat, we'll update all messages from that user to read = true.
-    // To update, we need to fetch all messages for that user and update each.
-
-    // For now, we'll just update locally and not persist across reloads. But we'll store read status in Firebase later.
 
     // Quick workaround: we'll store read status in localStorage per user.
     const key = `admin_read_${phone}`;
@@ -760,7 +739,6 @@ function Admin() {
                       <div
                         key={user.phone}
                         onClick={() => {
-                          // Find full user object from users list
                           const fullUser = users.find(u => u.phone === user.phone) || { name: user.name, phone: user.phone };
                           selectUser(fullUser);
                         }}
