@@ -539,7 +539,7 @@ function Dashboard() {
     const unsubscribe = onChildAdded(msgRef, (snapshot) => {
       const msg = snapshot.val();
       const userPhone = localStorage.getItem('userPhone') || 'unknown';
-      if (msg.phone === userPhone || msg.sender === 'admin') {
+      if (msg.phone === userPhone) {
         setMessages(prev => {
           const exists = prev.some(m => m.timestamp === msg.timestamp && m.text === msg.text);
           if (exists) return prev;
