@@ -310,7 +310,14 @@ function Dashboard() {
 
   const userName = localStorage.getItem('userName') || "Fan";
 
+  // ===== UPDATED LOGOUT – clears ALL session data =====
   const handleLogout = () => {
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userPhone");
+    localStorage.removeItem("isSpecialUser");
+    localStorage.removeItem("isPremium");
+    localStorage.removeItem("subscription");
     window.location.href = "/login";
   };
 

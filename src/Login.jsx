@@ -116,7 +116,7 @@ function Login() {
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userName", user.name || "Fan");
       localStorage.setItem("userPhone", phone);
-      localStorage.setItem("isSpecialUser", "false");
+      localStorage.removeItem("isSpecialUser");
       
       // Check if user has subscription
       const sub = JSON.parse(localStorage.getItem('subscription') || 'null');
