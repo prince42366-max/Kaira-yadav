@@ -23,7 +23,7 @@ function Dashboard() {
 
   const [popupContent, setPopupContent] = useState(null);
 
-  // ===== GET CURRENT USER PHONE =====
+  // ===== GET CURRENT USER =====
   const userName = localStorage.getItem('userName') || "Fan";
   const userPhone = localStorage.getItem('userPhone') || 'unknown';
 
@@ -35,194 +35,81 @@ function Dashboard() {
 
   const [showBuyCoupons, setShowBuyCoupons] = useState(false);
 
-  // ===== CHECK IF SPECIAL USER =====
+  // ===== SPECIAL USER =====
   const isSpecialUser = localStorage.getItem('isSpecialUser') === 'true';
 
-  // ===== HARDCODED CONTENT (with 5 extra photos & 5 extra videos) =====
+  // ===== MULTI‑TAB SYNC =====
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "isLoggedIn" || e.key === "userPhone" || e.key === "isSpecialUser") {
+        window.location.reload();
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  // ===== HARDCODED CONTENT (unchanged) =====
   const hardcodedContent = [
-    // Existing photos
     {
-      id: 1,
-      type: "📸 Photo",
-      title: "Exclusive Photo 1",
-      date: new Date().toLocaleDateString(),
-      file: "profile.jpg.jpeg",
-      fileType: "image",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
+      id: 1, type: "📸 Photo", title: "Exclusive Photo 1", date: new Date().toLocaleDateString(),
+      file: "profile.jpg.jpeg", fileType: "image", likes: 0, liked: false, views: 0, stickers: []
     },
     {
-      id: 2,
-      type: "📸 Photo",
-      title: "Exclusive Photo 2",
-      date: new Date().toLocaleDateString(),
-      file: "p1.jpeg",
-      fileType: "image",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
+      id: 2, type: "📸 Photo", title: "Exclusive Photo 2", date: new Date().toLocaleDateString(),
+      file: "p1.jpeg", fileType: "image", likes: 0, liked: false, views: 0, stickers: []
     },
     {
-      id: 3,
-      type: "📸 Photo",
-      title: "Exclusive Photo 3",
-      date: new Date().toLocaleDateString(),
-      file: "p2.jpeg",
-      fileType: "image",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
-    },
-    // Existing videos
-    {
-      id: 4,
-      type: "🎬 Video",
-      title: "Exclusive Video 1",
-      date: new Date().toLocaleDateString(),
-      file: "prevew 4.mp4",
-      fileType: "video",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
+      id: 3, type: "📸 Photo", title: "Exclusive Photo 3", date: new Date().toLocaleDateString(),
+      file: "p2.jpeg", fileType: "image", likes: 0, liked: false, views: 0, stickers: []
     },
     {
-      id: 5,
-      type: "🎬 Video",
-      title: "Exclusive Video 2",
-      date: new Date().toLocaleDateString(),
-      file: "prevew 3.mp4",
-      fileType: "video",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
-    },
-    // ===== 5 EXTRA PHOTOS (IDs 6-10) =====
-    {
-      id: 6,
-      type: "📸 Photo",
-      title: "Exclusive Photo 4",
-      date: new Date().toLocaleDateString(),
-      file: "p3.png",
-      fileType: "image",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
+      id: 4, type: "🎬 Video", title: "Exclusive Video 1", date: new Date().toLocaleDateString(),
+      file: "prevew 4.mp4", fileType: "video", likes: 0, liked: false, views: 0, stickers: []
     },
     {
-      id: 7,
-      type: "📸 Photo",
-      title: "Exclusive Photo 5",
-      date: new Date().toLocaleDateString(),
-      file: "photo5.jpg",
-      fileType: "image",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
+      id: 5, type: "🎬 Video", title: "Exclusive Video 2", date: new Date().toLocaleDateString(),
+      file: "prevew 3.mp4", fileType: "video", likes: 0, liked: false, views: 0, stickers: []
     },
     {
-      id: 8,
-      type: "📸 Photo",
-      title: "Exclusive Photo 6",
-      date: new Date().toLocaleDateString(),
-      file: "photo6.jpg",
-      fileType: "image",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
+      id: 6, type: "📸 Photo", title: "Exclusive Photo 4", date: new Date().toLocaleDateString(),
+      file: "p3.png", fileType: "image", likes: 0, liked: false, views: 0, stickers: []
     },
     {
-      id: 9,
-      type: "📸 Photo",
-      title: "Exclusive Photo 7",
-      date: new Date().toLocaleDateString(),
-      file: "photo7.jpg",
-      fileType: "image",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
+      id: 7, type: "📸 Photo", title: "Exclusive Photo 5", date: new Date().toLocaleDateString(),
+      file: "photo5.jpg", fileType: "image", likes: 0, liked: false, views: 0, stickers: []
     },
     {
-      id: 10,
-      type: "📸 Photo",
-      title: "Exclusive Photo 8",
-      date: new Date().toLocaleDateString(),
-      file: "photo8.jpg",
-      fileType: "image",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
-    },
-    // ===== 5 EXTRA VIDEOS (IDs 11-15) =====
-    {
-      id: 11,
-      type: "🎬 Video",
-      title: "Exclusive Video 3",
-      date: new Date().toLocaleDateString(),
-      file: "dashbord v.mp4",
-      fileType: "video",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
+      id: 8, type: "📸 Photo", title: "Exclusive Photo 6", date: new Date().toLocaleDateString(),
+      file: "photo6.jpg", fileType: "image", likes: 0, liked: false, views: 0, stickers: []
     },
     {
-      id: 12,
-      type: "🎬 Video",
-      title: "Exclusive Video 4",
-      date: new Date().toLocaleDateString(),
-      file: "v1.mp4",
-      fileType: "video",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
+      id: 9, type: "📸 Photo", title: "Exclusive Photo 7", date: new Date().toLocaleDateString(),
+      file: "photo7.jpg", fileType: "image", likes: 0, liked: false, views: 0, stickers: []
     },
     {
-      id: 13,
-      type: "🎬 Video",
-      title: "Exclusive Video 5",
-      date: new Date().toLocaleDateString(),
-      file: "video5.mp4",
-      fileType: "video",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
+      id: 10, type: "📸 Photo", title: "Exclusive Photo 8", date: new Date().toLocaleDateString(),
+      file: "photo8.jpg", fileType: "image", likes: 0, liked: false, views: 0, stickers: []
     },
     {
-      id: 14,
-      type: "🎬 Video",
-      title: "Exclusive Video 6",
-      date: new Date().toLocaleDateString(),
-      file: "video6.mp4",
-      fileType: "video",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
+      id: 11, type: "🎬 Video", title: "Exclusive Video 3", date: new Date().toLocaleDateString(),
+      file: "dashbord v.mp4", fileType: "video", likes: 0, liked: false, views: 0, stickers: []
     },
     {
-      id: 15,
-      type: "🎬 Video",
-      title: "Exclusive Video 7",
-      date: new Date().toLocaleDateString(),
-      file: "video7.mp4",
-      fileType: "video",
-      likes: 0,
-      liked: false,
-      views: 0,
-      stickers: []
+      id: 12, type: "🎬 Video", title: "Exclusive Video 4", date: new Date().toLocaleDateString(),
+      file: "v1.mp4", fileType: "video", likes: 0, liked: false, views: 0, stickers: []
+    },
+    {
+      id: 13, type: "🎬 Video", title: "Exclusive Video 5", date: new Date().toLocaleDateString(),
+      file: "video5.mp4", fileType: "video", likes: 0, liked: false, views: 0, stickers: []
+    },
+    {
+      id: 14, type: "🎬 Video", title: "Exclusive Video 6", date: new Date().toLocaleDateString(),
+      file: "video6.mp4", fileType: "video", likes: 0, liked: false, views: 0, stickers: []
+    },
+    {
+      id: 15, type: "🎬 Video", title: "Exclusive Video 7", date: new Date().toLocaleDateString(),
+      file: "video7.mp4", fileType: "video", likes: 0, liked: false, views: 0, stickers: []
     },
   ];
 
@@ -262,7 +149,6 @@ function Dashboard() {
     };
   }, []);
 
-  // ===== CHECK UNREAD NOTIFICATIONS =====
   useEffect(() => {
     const checkUnread = () => {
       const saved = localStorage.getItem('notifications');
@@ -312,7 +198,6 @@ function Dashboard() {
     };
   }, [userPhone]);
 
-  // ===== LOGOUT – clears ALL per‑user data =====
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("userName");
@@ -320,12 +205,11 @@ function Dashboard() {
     localStorage.removeItem("isSpecialUser");
     localStorage.removeItem("isPremium");
     localStorage.removeItem(`subscription_${userPhone}`);
-    localStorage.removeItem('subscription'); // safety
+    localStorage.removeItem('subscription');
     localStorage.removeItem(`coupons_${userPhone}`);
     window.location.href = "/login";
   };
 
-  // ===== LOAD RAZORPAY SCRIPT =====
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
       const script = document.createElement('script');
@@ -336,7 +220,6 @@ function Dashboard() {
     });
   };
 
-  // ===== BUY COUPONS =====
   const buyCoupons = async (amount, price, couponCount) => {
     const isScriptLoaded = await loadRazorpayScript();
     if (!isScriptLoaded) {
@@ -371,7 +254,7 @@ function Dashboard() {
         handler: function(response) {
           const newCoupons = coupons + couponCount;
           setCoupons(newCoupons);
-          localStorage.setItem(`coupons_${userPhone}`, JSON.stringify(newCoupons)); // per‑user
+          localStorage.setItem(`coupons_${userPhone}`, JSON.stringify(newCoupons));
           alert(`✅ Payment successful! ${couponCount} coupons added! 🎉`);
         },
         prefill: {
@@ -393,7 +276,6 @@ function Dashboard() {
     }
   };
 
-  // ===== HANDLE LIKE =====
   const handleLike = (contentId) => {
     if (isSpecialUser) {
       const updatedContent = content.map(c => 
@@ -414,7 +296,7 @@ function Dashboard() {
 
     const newCoupons = coupons - 2;
     setCoupons(newCoupons);
-    localStorage.setItem(`coupons_${userPhone}`, JSON.stringify(newCoupons)); // per‑user
+    localStorage.setItem(`coupons_${userPhone}`, JSON.stringify(newCoupons));
 
     const updatedContent = content.map(c => 
       c.id === contentId 
@@ -426,7 +308,6 @@ function Dashboard() {
     localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
   };
 
-  // ===== SEND MESSAGE (FIREBASE) WITH read: false =====
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!message.trim()) return;
@@ -439,7 +320,7 @@ function Dashboard() {
     if (!isSpecialUser) {
       const newCoupons = coupons - 5;
       setCoupons(newCoupons);
-      localStorage.setItem(`coupons_${userPhone}`, JSON.stringify(newCoupons)); // per‑user
+      localStorage.setItem(`coupons_${userPhone}`, JSON.stringify(newCoupons));
     }
 
     const msgRef = ref(database, 'chatMessages');
@@ -456,7 +337,6 @@ function Dashboard() {
     setMessage("");
   };
 
-  // ===== SEND STICKER =====
   const sendStickerToContent = (contentId, sticker) => {
     if (isSpecialUser) {
       const updatedContent = content.map(c => 
@@ -478,7 +358,7 @@ function Dashboard() {
 
     const newCoupons = coupons - 2;
     setCoupons(newCoupons);
-    localStorage.setItem(`coupons_${userPhone}`, JSON.stringify(newCoupons)); // per‑user
+    localStorage.setItem(`coupons_${userPhone}`, JSON.stringify(newCoupons));
 
     const updatedContent = content.map(c => 
       c.id === contentId 
@@ -530,14 +410,13 @@ function Dashboard() {
   const hasPhotos = content && content.filter(item => item.fileType === 'image').length > 0;
 
   // ============================================================
-  // LISTEN FOR FIREBASE MESSAGES (REAL-TIME) – only own messages
+  // LISTEN FOR FIREBASE MESSAGES (only own messages)
   // ============================================================
   useEffect(() => {
     const msgRef = ref(database, 'chatMessages');
     const unsubscribe = onChildAdded(msgRef, (snapshot) => {
       const msg = snapshot.val();
       const currentUserPhone = localStorage.getItem('userPhone') || 'unknown';
-      // FIX: only show messages belonging to the current user
       if (msg.phone === currentUserPhone) {
         setMessages(prev => {
           const exists = prev.some(m => m.timestamp === msg.timestamp && m.text === msg.text);
@@ -550,6 +429,9 @@ function Dashboard() {
     return () => unsubscribe();
   }, []);
 
+  // ============================================================
+  // JSX (unchanged from previous version)
+  // ============================================================
   return (
     <div
       onContextMenu={(e) => { e.preventDefault(); alert("📸 Screenshots and screen recording are disabled."); return false; }}

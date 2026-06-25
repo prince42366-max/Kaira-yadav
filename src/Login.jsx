@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function Login() {
   // Login states
@@ -20,6 +20,17 @@ function Login() {
   const [canResend, setCanResend] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
 
+  // ===== MULTI‑TAB SYNC =====
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "isLoggedIn" || e.key === "userPhone" || e.key === "isSpecialUser") {
+        window.location.reload();
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   // ===== DEDICATED PREMIUM ACCOUNT =====
   const SPECIAL_PHONE = "143213143213";
   const SPECIAL_PASSWORD = "yuri@1234";
@@ -28,7 +39,6 @@ function Login() {
   const handleLogin = (e) => {
     e.preventDefault();
     
-    // Phone length check (skip for special number)
     if (phone !== SPECIAL_PHONE && phone.length < 10) {
       setError("Please enter a valid phone number!");
       return;
@@ -41,7 +51,6 @@ function Login() {
 
     // ===== SPECIAL PREMIUM ACCOUNT =====
     if (phone === SPECIAL_PHONE && password === SPECIAL_PASSWORD) {
-      // Create/update user in localStorage
       const users = JSON.parse(localStorage.getItem('users') || '[]');
       let user = users.find(u => u.phone === phone);
       if (!user) {
@@ -65,7 +74,6 @@ function Login() {
         localStorage.setItem('users', JSON.stringify(users));
       }
 
-      // Set premium subscription (10 years) – PER USER
       const expiryDate = new Date();
       expiryDate.setFullYear(expiryDate.getFullYear() + 10);
       const subscriptionData = {
@@ -76,13 +84,12 @@ function Login() {
         status: 'active',
         paymentId: 'admin_' + Date.now()
       };
-      // Store with phone-specific key
       localStorage.setItem(`subscription_${phone}`, JSON.stringify(subscriptionData));
       localStorage.setItem('isPremium', 'true');
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userName", user.name || "Premium Admin");
       localStorage.setItem("userPhone", phone);
-      localStorage.setItem("isSpecialUser", "true"); // For unlimited coupons
+      localStorage.setItem("isSpecialUser", "true");
 
       setError("");
       setLoading(false);
@@ -117,13 +124,9 @@ function Login() {
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userName", user.name || "Fan");
       localStorage.setItem("userPhone", phone);
-      // Remove the old generic special flag (just in case)
       localStorage.removeItem("isSpecialUser");
-      
-      // Remove any leftover generic subscription from another user
       localStorage.removeItem('subscription');
       
-      // Check if THIS user has a subscription (phone-specific)
       const sub = JSON.parse(localStorage.getItem(`subscription_${phone}`) || 'null');
       if (sub) {
         const expiryDate = new Date(sub.expiry);
