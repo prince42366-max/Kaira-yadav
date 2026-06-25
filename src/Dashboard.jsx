@@ -23,9 +23,13 @@ function Dashboard() {
 
   const [popupContent, setPopupContent] = useState(null);
 
-  // ===== COUPONS =====
+  // ===== GET CURRENT USER PHONE =====
+  const userName = localStorage.getItem('userName') || "Fan";
+  const userPhone = localStorage.getItem('userPhone') || 'unknown';
+
+  // ===== PER‑USER COUPONS =====
   const [coupons, setCoupons] = useState(() => {
-    const saved = localStorage.getItem('userCoupons');
+    const saved = localStorage.getItem(`coupons_${userPhone}`);
     return saved ? JSON.parse(saved) : 10;
   });
 
@@ -275,9 +279,6 @@ function Dashboard() {
     };
   }, []);
 
-  const userName = localStorage.getItem('userName') || "Fan";
-  const userPhone = localStorage.getItem('userPhone') || 'unknown'; // ADDED for per‑user subscription
-
   // ===== SUBSCRIPTION (per user) =====
   const [subscription, setSubscription] = useState(null);
 
@@ -311,7 +312,7 @@ function Dashboard() {
     };
   }, [userPhone]);
 
-  // ===== UPDATED LOGOUT – clears ALL session data, including per‑user subscription =====
+  // ===== LOGOUT – clears ALL per‑user data =====
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("userName");
@@ -319,8 +320,8 @@ function Dashboard() {
     localStorage.removeItem("isSpecialUser");
     localStorage.removeItem("isPremium");
     localStorage.removeItem(`subscription_${userPhone}`);
-    // Also remove old generic subscription key (just in case)
-    localStorage.removeItem('subscription');
+    localStorage.removeItem('subscription'); // safety
+    localStorage.removeItem(`coupons_${userPhone}`);
     window.location.href = "/login";
   };
 
@@ -370,7 +371,7 @@ function Dashboard() {
         handler: function(response) {
           const newCoupons = coupons + couponCount;
           setCoupons(newCoupons);
-          localStorage.setItem('userCoupons', JSON.stringify(newCoupons));
+          localStorage.setItem(`coupons_${userPhone}`, JSON.stringify(newCoupons)); // per‑user
           alert(`✅ Payment successful! ${couponCount} coupons added! 🎉`);
         },
         prefill: {
@@ -413,7 +414,7 @@ function Dashboard() {
 
     const newCoupons = coupons - 2;
     setCoupons(newCoupons);
-    localStorage.setItem('userCoupons', JSON.stringify(newCoupons));
+    localStorage.setItem(`coupons_${userPhone}`, JSON.stringify(newCoupons)); // per‑user
 
     const updatedContent = content.map(c => 
       c.id === contentId 
@@ -438,11 +439,8 @@ function Dashboard() {
     if (!isSpecialUser) {
       const newCoupons = coupons - 5;
       setCoupons(newCoupons);
-      localStorage.setItem('userCoupons', JSON.stringify(newCoupons));
+      localStorage.setItem(`coupons_${userPhone}`, JSON.stringify(newCoupons)); // per‑user
     }
-
-    const userPhone = localStorage.getItem('userPhone') || 'unknown';
-    const userName = localStorage.getItem('userName') || 'Fan';
 
     const msgRef = ref(database, 'chatMessages');
     push(msgRef, {
@@ -480,7 +478,7 @@ function Dashboard() {
 
     const newCoupons = coupons - 2;
     setCoupons(newCoupons);
-    localStorage.setItem('userCoupons', JSON.stringify(newCoupons));
+    localStorage.setItem(`coupons_${userPhone}`, JSON.stringify(newCoupons)); // per‑user
 
     const updatedContent = content.map(c => 
       c.id === contentId 
@@ -532,14 +530,15 @@ function Dashboard() {
   const hasPhotos = content && content.filter(item => item.fileType === 'image').length > 0;
 
   // ============================================================
-  // LISTEN FOR FIREBASE MESSAGES (REAL-TIME)
+  // LISTEN FOR FIREBASE MESSAGES (REAL-TIME) – only own messages
   // ============================================================
   useEffect(() => {
     const msgRef = ref(database, 'chatMessages');
     const unsubscribe = onChildAdded(msgRef, (snapshot) => {
       const msg = snapshot.val();
-      const userPhone = localStorage.getItem('userPhone') || 'unknown';
-      if (msg.phone === userPhone) {
+      const currentUserPhone = localStorage.getItem('userPhone') || 'unknown';
+      // FIX: only show messages belonging to the current user
+      if (msg.phone === currentUserPhone) {
         setMessages(prev => {
           const exists = prev.some(m => m.timestamp === msg.timestamp && m.text === msg.text);
           if (exists) return prev;
