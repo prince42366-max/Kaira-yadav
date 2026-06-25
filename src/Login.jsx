@@ -65,7 +65,7 @@ function Login() {
         localStorage.setItem('users', JSON.stringify(users));
       }
 
-      // Set premium subscription (10 years)
+      // Set premium subscription (10 years) – PER USER
       const expiryDate = new Date();
       expiryDate.setFullYear(expiryDate.getFullYear() + 10);
       const subscriptionData = {
@@ -76,7 +76,8 @@ function Login() {
         status: 'active',
         paymentId: 'admin_' + Date.now()
       };
-      localStorage.setItem('subscription', JSON.stringify(subscriptionData));
+      // Store with phone-specific key
+      localStorage.setItem(`subscription_${phone}`, JSON.stringify(subscriptionData));
       localStorage.setItem('isPremium', 'true');
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userName", user.name || "Premium Admin");
@@ -116,15 +117,24 @@ function Login() {
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userName", user.name || "Fan");
       localStorage.setItem("userPhone", phone);
+      // Remove the old generic special flag (just in case)
       localStorage.removeItem("isSpecialUser");
       
-      // Check if user has subscription
-      const sub = JSON.parse(localStorage.getItem('subscription') || 'null');
+      // Remove any leftover generic subscription from another user
+      localStorage.removeItem('subscription');
+      
+      // Check if THIS user has a subscription (phone-specific)
+      const sub = JSON.parse(localStorage.getItem(`subscription_${phone}`) || 'null');
       if (sub) {
         const expiryDate = new Date(sub.expiry);
         if (expiryDate > new Date()) {
           localStorage.setItem('isPremium', 'true');
+        } else {
+          localStorage.removeItem(`subscription_${phone}`);
+          localStorage.removeItem('isPremium');
         }
+      } else {
+        localStorage.removeItem('isPremium');
       }
       
       alert("✅ Login successful! Welcome back!");

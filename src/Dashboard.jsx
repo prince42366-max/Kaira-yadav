@@ -104,7 +104,7 @@ function Dashboard() {
       type: "📸 Photo",
       title: "Exclusive Photo 4",
       date: new Date().toLocaleDateString(),
-      file: "p3.png",       // change file name as needed
+      file: "p3.png",
       fileType: "image",
       likes: 0,
       liked: false,
@@ -229,7 +229,7 @@ function Dashboard() {
   });
 
   useEffect(() => {
-    const adminItems = content.filter(item => item.id > 15); // adjust if needed
+    const adminItems = content.filter(item => item.id > 15);
     localStorage.setItem('uploadedContent', JSON.stringify(adminItems));
   }, [content]);
 
@@ -275,11 +275,14 @@ function Dashboard() {
     };
   }, []);
 
-  // ===== SUBSCRIPTION =====
+  const userName = localStorage.getItem('userName') || "Fan";
+  const userPhone = localStorage.getItem('userPhone') || 'unknown'; // ADDED for per‑user subscription
+
+  // ===== SUBSCRIPTION (per user) =====
   const [subscription, setSubscription] = useState(null);
 
   const refreshSubscription = () => {
-    const saved = localStorage.getItem('subscription');
+    const saved = localStorage.getItem(`subscription_${userPhone}`);
     if (saved) {
       try {
         const data = JSON.parse(saved);
@@ -288,12 +291,12 @@ function Dashboard() {
         if (expiryDate > today) {
           setSubscription(data);
         } else {
-          localStorage.removeItem('subscription');
+          localStorage.removeItem(`subscription_${userPhone}`);
           setSubscription(null);
         }
         return;
       } catch (e) {
-        localStorage.removeItem('subscription');
+        localStorage.removeItem(`subscription_${userPhone}`);
         setSubscription(null);
       }
     }
@@ -306,18 +309,18 @@ function Dashboard() {
     return () => {
       window.removeEventListener('focus', refreshSubscription);
     };
-  }, []);
+  }, [userPhone]);
 
-  const userName = localStorage.getItem('userName') || "Fan";
-
-  // ===== UPDATED LOGOUT – clears ALL session data =====
+  // ===== UPDATED LOGOUT – clears ALL session data, including per‑user subscription =====
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("userName");
     localStorage.removeItem("userPhone");
     localStorage.removeItem("isSpecialUser");
     localStorage.removeItem("isPremium");
-    localStorage.removeItem("subscription");
+    localStorage.removeItem(`subscription_${userPhone}`);
+    // Also remove old generic subscription key (just in case)
+    localStorage.removeItem('subscription');
     window.location.href = "/login";
   };
 
@@ -441,7 +444,6 @@ function Dashboard() {
     const userPhone = localStorage.getItem('userPhone') || 'unknown';
     const userName = localStorage.getItem('userName') || 'Fan';
 
-    // ✅ Send to Firebase with 'read: false' so admin sees unread badge
     const msgRef = ref(database, 'chatMessages');
     push(msgRef, {
       phone: userPhone,
@@ -450,7 +452,7 @@ function Dashboard() {
       from: "You",
       sender: 'fan',
       timestamp: Date.now(),
-      read: false   // ← IMPORTANT: Marks as unread for admin
+      read: false
     });
 
     setMessage("");
@@ -495,7 +497,7 @@ function Dashboard() {
 
   const cancelSubscription = () => {
     if (window.confirm("Are you sure you want to cancel your subscription?")) {
-      localStorage.removeItem('subscription');
+      localStorage.removeItem(`subscription_${userPhone}`);
       setSubscription(null);
       alert("✅ Subscription cancelled successfully!");
     }
