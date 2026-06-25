@@ -1,4 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import {
+  auth,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "./firebase";
 
 function Login() {
   // Login states
@@ -8,7 +13,7 @@ function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  
+
   // Forgot Password states
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -20,30 +25,83 @@ function Login() {
   const [canResend, setCanResend] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
 
-  // ===== MULTI‑TAB SYNC =====
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === "isLoggedIn" || e.key === "userPhone" || e.key === "isSpecialUser") {
-        window.location.reload();
-      }
-    };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
-
   // ===== DEDICATED PREMIUM ACCOUNT =====
   const SPECIAL_PHONE = "143213143213";
   const SPECIAL_PASSWORD = "yuri@1234";
 
+  // ===== GOOGLE LOGIN =====
+  const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user; // Firebase user
+      const email = user.email;
+      const name = user.displayName || "Fan";
+      const googleUid = user.uid;
+
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      let existingUser = users.find(u => u.email === email || u.googleUid === googleUid);
+
+      if (!existingUser) {
+        const newUser = {
+          id: Date.now(),
+          name: name,
+          phone: "google_" + googleUid,   // unique for chat
+          email: email,
+          password: "",                    // Google users don't have a password
+          plan: "Free",
+          status: "Active",
+          joined: new Date().toLocaleDateString(),
+          loginTime: new Date().toLocaleString(),
+          googleUid: googleUid,
+          isGoogle: true
+        };
+        users.push(newUser);
+        localStorage.setItem('users', JSON.stringify(users));
+        existingUser = newUser;
+      } else {
+        existingUser.loginTime = new Date().toLocaleString();
+        existingUser.name = name;          // update name from Google
+        localStorage.setItem('users', JSON.stringify(users));
+      }
+
+      // Set session
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("userName", existingUser.name);
+      localStorage.setItem("userPhone", existingUser.phone);
+      localStorage.removeItem("isSpecialUser");
+
+      // Check subscription
+      const sub = JSON.parse(localStorage.getItem(`subscription_${existingUser.phone}`) || 'null');
+      if (sub) {
+        const expiryDate = new Date(sub.expiry);
+        if (expiryDate > new Date()) {
+          localStorage.setItem('isPremium', 'true');
+        } else {
+          localStorage.removeItem(`subscription_${existingUser.phone}`);
+          localStorage.removeItem('isPremium');
+        }
+      } else {
+        localStorage.removeItem('isPremium');
+      }
+
+      alert(`✅ Welcome, ${name}!`);
+      window.location.href = "/dashboard";
+    } catch (error) {
+      console.error("Google login error:", error);
+      setError("❌ Google sign‑in failed. Please try again.");
+    }
+  };
+
   // ============ MAIN LOGIN ============
   const handleLogin = (e) => {
     e.preventDefault();
-    
+
     if (phone !== SPECIAL_PHONE && phone.length < 10) {
       setError("Please enter a valid phone number!");
       return;
     }
-    
+
     if (password.length < 4) {
       setError("Please enter your password!");
       return;
@@ -115,18 +173,18 @@ function Login() {
 
     setError("");
     setLoading(true);
-    
+
     setTimeout(() => {
       setLoading(false);
       user.loginTime = new Date().toLocaleString();
       localStorage.setItem('users', JSON.stringify(users));
-      
+
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userName", user.name || "Fan");
       localStorage.setItem("userPhone", phone);
       localStorage.removeItem("isSpecialUser");
       localStorage.removeItem('subscription');
-      
+
       const sub = JSON.parse(localStorage.getItem(`subscription_${phone}`) || 'null');
       if (sub) {
         const expiryDate = new Date(sub.expiry);
@@ -139,7 +197,7 @@ function Login() {
       } else {
         localStorage.removeItem('isPremium');
       }
-      
+
       alert("✅ Login successful! Welcome back!");
       window.location.href = "/dashboard";
     }, 1500);
@@ -148,7 +206,7 @@ function Login() {
   // ============ FORGOT PASSWORD - SEND OTP VIA EMAIL ============
   const handleSendOTP = async (e) => {
     e.preventDefault();
-    
+
     if (!forgotEmail) {
       setError("Please enter your email!");
       return;
@@ -173,19 +231,19 @@ function Login() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         localStorage.setItem('otp_verification', JSON.stringify({
           email: forgotEmail,
           otp: data.otp,
           timestamp: Date.now()
         }));
-        
+
         setStep("otp");
         setTimer(30);
         setCanResend(false);
         alert(`✅ OTP sent to ${forgotEmail}!`);
-        
+
         const countdown = setInterval(() => {
           setTimer((prev) => {
             if (prev <= 1) {
@@ -209,7 +267,7 @@ function Login() {
   // ============ FORGOT PASSWORD - VERIFY OTP ============
   const handleVerifyOTP = (e) => {
     e.preventDefault();
-    
+
     if (otp.length < 4) {
       setError("Please enter a valid OTP!");
       return;
@@ -217,7 +275,7 @@ function Login() {
 
     setError("");
     setOtpLoading(true);
-    
+
     const stored = JSON.parse(localStorage.getItem('otp_verification') || '{}');
     const storedOTP = stored.otp;
     const timestamp = stored.timestamp;
@@ -242,12 +300,12 @@ function Login() {
   // ============ FORGOT PASSWORD - RESET PASSWORD ============
   const handleResetPassword = (e) => {
     e.preventDefault();
-    
+
     if (newPassword.length < 6) {
       setError("Password must be at least 6 characters!");
       return;
     }
-    
+
     if (newPassword !== confirmNewPassword) {
       setError("Passwords do not match!");
       return;
@@ -262,7 +320,7 @@ function Login() {
 
     setError("");
     setOtpLoading(true);
-    
+
     setTimeout(() => {
       setOtpLoading(false);
       alert("✅ Password reset successfully! Please login with your new password.");
@@ -278,10 +336,10 @@ function Login() {
   // ============ RESEND OTP ============
   const handleResendOTP = async () => {
     if (!canResend) return;
-    
+
     setTimer(30);
     setCanResend(false);
-    
+
     try {
       const response = await fetch('/api/send-otp-email', {
         method: 'POST',
@@ -303,7 +361,7 @@ function Login() {
     } catch (error) {
       alert("Network error.");
     }
-    
+
     const countdown = setInterval(() => {
       setTimer((prev) => {
         if (prev <= 1) {
@@ -381,6 +439,44 @@ function Login() {
               {error}
             </div>
           )}
+
+          {/* GOOGLE BUTTON */}
+          <button
+            onClick={handleGoogleLogin}
+            style={{
+              width: "100%",
+              padding: "14px",
+              borderRadius: "10px",
+              border: "1px solid #2a2a4a",
+              background: "#ffffff",
+              color: "#000000",
+              fontSize: "16px",
+              fontWeight: "600",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              marginBottom: "20px",
+              transition: "all 0.3s",
+            }}
+            onMouseEnter={(e) => { e.target.style.background = "#f3f4f6"; }}
+            onMouseLeave={(e) => { e.target.style.background = "#ffffff"; }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          <div style={{ display: "flex", alignItems: "center", marginBottom: "20px" }}>
+            <div style={{ flex: 1, height: "1px", background: "#2a2a4a" }}></div>
+            <span style={{ margin: "0 15px", color: "#94a3b8", fontSize: "14px" }}>or login with phone</span>
+            <div style={{ flex: 1, height: "1px", background: "#2a2a4a" }}></div>
+          </div>
 
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: "20px" }}>
@@ -689,11 +785,10 @@ function Login() {
                   border: "1px solid #2a2a4a",
                   background: "#0a0a0f",
                   color: "white",
-                  fontSize: "16px",
+                  fontSize: "24px",
                   outline: "none",
                   boxSizing: "border-box",
                   textAlign: "center",
-                  fontSize: "24px",
                   letterSpacing: "10px",
                 }}
               />
